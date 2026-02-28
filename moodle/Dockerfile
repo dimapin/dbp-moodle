@@ -1,5 +1,4 @@
 FROM php:8.2.30-fpm-bookworm AS build
-USER root
 ARG MOODLE_VERSION=${MOODLE_VERSION:-"4.5.8"}
 #This is the path moodle will be placed after downloading for our Moodle Update Pipeline
 ARG MOODLE_PATH="/opt/dbp-moodle/moodle"
@@ -9,8 +8,7 @@ ARG APACHE_VERSION=${APACHE_VERSION:-"2.4.66-1~deb12u1"}
 ARG APACHE_DOWNLOAD_URL="https://snapshot.debian.org/archive/debian/20260131T202859Z/pool/main/a/apache2/"
 WORKDIR /
 ARG WITH_ALL_LOCALES="no"
-RUN mkdir /bitnami
-RUN mkdir /dbp-moodle
+RUN mkdir /bitnami /dbp-moodle
 
 COPY scripts/install /scripts/install
 COPY scripts/init /scripts/init
@@ -72,8 +70,6 @@ RUN MAJOR_MINOR=$(echo "$MOODLE_VERSION" | cut -d. -f1,2) && \
 # Hardening
 RUN apt-get update && apt-get upgrade -y && \
     apt-get clean && rm -rf /var/lib/apt/lists /var/cache/apt/archives
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get clean && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 RUN find / -perm /6000 -type f -exec chmod a-s {} \; || true
 RUN sed -i -e '/pam_loginuid.so/ s/^#*/#/' /etc/pam.d/cron
 
@@ -83,9 +79,6 @@ RUN update-locale LANG=C.UTF-8 LC_MESSAGES=POSIX && \
 RUN echo 'en_AU.UTF-8 UTF-8' >> /etc/locale.gen
 RUN echo 'de_DE.UTF-8 UTF-8' >> /etc/locale.gen
 RUN /scripts/install/generate-locales.sh
-
-RUN chmod +x /scripts/install/generate-locales.sh && \
-    /scripts/install/generate-locales.sh
 
 COPY /scripts/init/apache/httpd.conf /etc/apache2/apache2.conf
 
@@ -106,18 +99,9 @@ RUN mkdir /plugins && /scripts/install/downloadPlugins.sh
 RUN apt-get remove -y curl && \
     apt-get autoremove -y
 
-RUN chmod -R g+w /opt/dbp-moodle
-RUN chown 1001:1001 -R /opt/dbp-moodle
-
-RUN chmod -R g+w /dbp-moodle
-RUN chown 1001:1001 -R /dbp-moodle
-
-RUN chown 1001:root -R /scripts
-RUN chown 1001:root -R /plugins
-
-RUN chown 1001:1001 -R /var/log/apache2
-RUN chown 1001:1001 -R /etc/apache2
-RUN chown 1001:1001 -R /usr/local/etc/php
+RUN chmod -R g+w /opt/dbp-moodle /dbp-moodle && \
+    chown -R 1001:1001 /opt/dbp-moodle /dbp-moodle /var/log/apache2 /etc/apache2 /usr/local/etc/php && \
+    chown -R 1001:root /scripts /plugins
 
 USER 1001
 
