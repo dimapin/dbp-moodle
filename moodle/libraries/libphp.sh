@@ -34,7 +34,7 @@ php_conf_set() {
         pattern="^[; ]*${key}\s*=\s*[\"]?${value}(\.so)?[\"]?\s*$"
     fi
     local -r entry="${key} = ${value}"
-    if is_file_writable "$file"; then # TODO MIGRATION
+    if is_file_writable "$file"; then
         # Not using the ini-file tool since it does not play well with php.ini
         if grep -q -E "$pattern" "$file"; then
             replace_in_file "$file" "$pattern" "$entry"
@@ -106,40 +106,6 @@ php_set_runtime_config() {
 php_convert_to_boolean() {
     local -r value="${1:?missing value}"
     is_boolean_yes "$value" && echo "true" || echo "false"
-}
-
-########################
-# Execute/run PHP code and print to stdout
-# Globals:
-#   None
-# Stdin:
-#   Code to execute
-# Arguments:
-#   $1..$n - Input arguments to script
-# Returns:
-#   None
-#########################
-php_execute_print_output() {
-    local php_cmd
-    # Obtain the command specified via stdin
-    php_cmd="$(</dev/stdin)"
-    debug "Executing PHP code:\n${php_cmd}"
-    php -- "$@" <<< "<?php ${php_cmd}"
-}
-
-########################
-# Execute/run PHP code
-# Globals:
-#   None
-# Stdin:
-#   Code to execute
-# Arguments:
-#   $1..$n - Input arguments to script
-# Returns:
-#   None
-#########################
-php_execute() {
-    debug_execute php_execute_print_output "$@"
 }
 
 ########################

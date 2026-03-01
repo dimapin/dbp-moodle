@@ -11,5 +11,6 @@ wget "https://github.com/moodle/moodle/archive/refs/tags/v${image_version}.tar.g
 echo "Extracting Moodle to ${MOODLE_PATH}..."
 mkdir -p "$MOODLE_PATH"
 tar -xzf "/tmp/moodle-${image_version}.tgz" --strip-components=1 -C "$MOODLE_PATH" --no-same-owner
+rm "/tmp/moodle-${image_version}.tgz"
 
 echo "Moodle ${image_version} downloaded and extracted successfully."

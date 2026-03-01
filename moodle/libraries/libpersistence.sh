@@ -99,7 +99,7 @@ restore_persisted_app() {
         # We use 'realpath --no-symlinks' to ensure that the case of '.' is covered and the directory is removed
         file_to_restore_origin="$(realpath --no-symlinks "${install_dir}/${file_to_restore_relative}")"
         file_to_restore_destination="$(realpath --no-symlinks "${persist_dir}/${file_to_restore_relative}")"
-        # Those steps remove the application files in /opt/dbp-moodle/moodle and link to the persistent files in /bitnami/moodle
+        # Those steps remove the application files in /opt/dbp-moodle/moodle and link to the persistent files in /dbp-moodle/moodle
         rm -rf "$file_to_restore_origin"
         ln -sfn "$file_to_restore_destination" "$file_to_restore_origin"
     done

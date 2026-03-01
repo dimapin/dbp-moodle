@@ -77,4 +77,8 @@ export WEB_SERVER_HTTPS_PORT_NUMBER="$APACHE_HTTPS_PORT_NUMBER"
 export APACHE_SERVER_TOKENS="${APACHE_SERVER_TOKENS:-Prod}"
 export APACHE_SERVER_SIGNATURE="${APACHE_SERVER_SIGNATURE:-Off}"
 
+# PHP-FPM backend address (used by the Apache VirtualHost templates in split-container setup)
+export PHP_FPM_HOST="${PHP_FPM_HOST:-moodle-fpm}"
+export PHP_FPM_PORT="${PHP_FPM_PORT:-9000}"
+
 # Custom environment variables may be defined below

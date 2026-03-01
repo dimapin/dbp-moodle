@@ -63,7 +63,7 @@ download_oidc() {
 
     git clone https://github.com/dBildungsplattform/dbp-moodle-plugin-oidc.git
     cd dbp-moodle-plugin-oidc/ || exit 1
-    git checkout ${target_branch}
+    git checkout "${target_branch}"
     # create the zip archive in the initial directory, s.t. it can be treated equally to the other plugins
     (cd auth && zip -r ../../auth_oidc.zip oidc)
     cd ..
@@ -80,7 +80,7 @@ for plugin in "${moodle_plugin_list[@]}"; do
     fi
     moosh plugin-download -v "$major_minor" "$plugin"
     check_plugin_size "$plugin"
-    ((plugin_index++))
+    plugin_index=$((plugin_index + 1))
 done
 
 moosh plugin-download -v 3.7 customfield_dynamic

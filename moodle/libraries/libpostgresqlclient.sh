@@ -1,3 +1,4 @@
+#!/bin/bash
 # https://github.com/bitnami/containers/blob/main/bitnami/moodle/5.0/debian-12/rootfs/opt/bitnami/scripts/libpostgresqlclient.sh
 
 # Load Generic Libraries

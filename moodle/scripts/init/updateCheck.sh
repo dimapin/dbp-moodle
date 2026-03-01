@@ -1,13 +1,11 @@
 #!/bin/bash
 
+set -o errexit
 set -o nounset
+set -o pipefail
 
 . /scripts/liblog.sh
-
-moodle_path="/dbp-moodle/moodle"
-
-# data folders
-moodle_backup_path="/dbp-moodle/moodledata/moodle-backup"
+. /scripts/libdbp.sh
 
 onErrorRestoreBackup() {
     mv "${moodle_path}" "${moodle_path}-failed"

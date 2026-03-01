@@ -3,11 +3,8 @@ ARG MOODLE_VERSION=${MOODLE_VERSION:-"4.5.8"}
 #This is the path moodle will be placed after downloading for our Moodle Update Pipeline
 ARG MOODLE_PATH="/opt/dbp-moodle/moodle"
 ARG EXTRA_LOCALES=""
-#At the moment Apache will be updated to the latest release as unattended update during the build process
-ARG APACHE_VERSION=${APACHE_VERSION:-"2.4.66-1~deb12u1"}
-ARG APACHE_DOWNLOAD_URL="https://snapshot.debian.org/archive/debian/20260131T202859Z/pool/main/a/apache2/"
-WORKDIR /
 ARG WITH_ALL_LOCALES="no"
+WORKDIR /
 RUN mkdir /bitnami /dbp-moodle
 
 COPY scripts/install /scripts/install
@@ -22,7 +19,7 @@ RUN chmod -R +x /scripts/
 # Redis is the php extension php-redis required to connect to the redis session store
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y wget gpg curl acl gnupg jq ca-certificates cron locales git unzip zip autoconf && \
-    pecl install redis && \ 
+    pecl install redis && \
     docker-php-ext-enable redis
 
 # Install psql Version 13.x like in the other bitnami moodle image
@@ -31,16 +28,6 @@ RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmo
 
 RUN apt-get update && \
     apt-get install -y postgresql-client-13
-
-# Install apache2 and its dependencies
-RUN apt-get install -y libapr1 libaprutil1 libc6 libaprutil1-dbd-sqlite3 libcurl4 libaprutil1-ldap libldap-2.5-0 libexpat1 liblua5.3-0 libssl3 libxml2 media-types procps && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-bin_${APACHE_VERSION}_amd64.deb && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-data_${APACHE_VERSION}_all.deb && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-utils_${APACHE_VERSION}_amd64.deb && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2_${APACHE_VERSION}_amd64.deb && \
-    dpkg -i *.deb && \
-    apt-get install -y libapache2-mod-fcgid && \
-    rm *.deb
 
 #Install other dependencies
 RUN apt-get install -y nano gettext libpq5 libedit2 libfontconfig1 libfreetype6 libglib2.0-0 libjpeg62-turbo liblcms2-2 libltdl7 libmagickcore-6.q16-6 libmagickwand-6.q16-6 libmemcached11 libpcre3 libpng16-16 libtidy5deb1 libwebp7 libxslt1.1 libzip4 libbz2-dev
@@ -80,18 +67,13 @@ RUN echo 'en_AU.UTF-8 UTF-8' >> /etc/locale.gen
 RUN echo 'de_DE.UTF-8 UTF-8' >> /etc/locale.gen
 RUN /scripts/install/generate-locales.sh
 
-COPY /scripts/init/apache/httpd.conf /etc/apache2/apache2.conf
-
-RUN /scripts/install/apacheInstall.sh
-
 # Php configuration and installation
 RUN /scripts/install/phpInstall.sh
 
 # Prepare Moodle
-RUN chmod -R g+w /etc/apache2/
 RUN /scripts/install/moodleInstall.sh
 
-EXPOSE 8080 8443
+EXPOSE 9000
 
 # Install plugins to the image
 RUN mkdir /plugins && /scripts/install/downloadPlugins.sh
@@ -100,7 +82,7 @@ RUN apt-get remove -y curl && \
     apt-get autoremove -y
 
 RUN chmod -R g+w /opt/dbp-moodle /dbp-moodle && \
-    chown -R 1001:1001 /opt/dbp-moodle /dbp-moodle /var/log/apache2 /etc/apache2 /usr/local/etc/php && \
+    chown -R 1001:1001 /opt/dbp-moodle /dbp-moodle /usr/local/etc/php && \
     chown -R 1001:root /scripts /plugins
 
 USER 1001

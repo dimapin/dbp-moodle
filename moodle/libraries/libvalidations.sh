@@ -288,7 +288,7 @@ validate_string() {
         return 1
     fi
     if [[ "$max_length" -ge 0 ]] && [[ "${#string}" -gt "$max_length" ]]; then
-        echo "string length is great than $max_length"
+        echo "string length is greater than $max_length"
         return 1
     fi
 }
