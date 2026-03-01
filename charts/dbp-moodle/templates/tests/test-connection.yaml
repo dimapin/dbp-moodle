@@ -1,0 +1,70 @@
+{{- /*
+Helm-Test: Smoke-Test für Basis-TCP-Konnektivität
+
+Prüft nach dem Deployment, dass:
+  1. Der Moodle-Service auf Port 80 (→ Apache/PHP-FPM 8080) erreichbar ist
+  2. Der PostgreSQL-Service auf Port 5432 erreichbar ist
+
+Dieser Test ist bewusst auf TCP-Ebene gehalten, damit er auch mit
+moodleSkipInstall=true funktioniert (kein initialisiertes DB-Schema benötigt).
+
+WICHTIG: Der Release-Name darf kein "moodle" enthalten (z. B. "dbp-ci"),
+damit Bitnami's common.names.fullname den Moodle-Service als
+<release-name>-moodle statt nur <release-name> benennt.
+*/ -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-test-connection
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "common.labels.standard" (dict "customLabels" .Values.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-connection
+      image: busybox:1.36
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+
+          MOODLE_SVC="{{ .Release.Name }}-moodle"
+          POSTGRES_SVC="{{ .Release.Name }}-postgresql"
+          MOODLE_PORT=80
+          POSTGRES_PORT=5432
+
+          echo "=== Smoke-Test: TCP-Konnektivität ==="
+
+          echo ">> Teste Moodle-Service ${MOODLE_SVC}:${MOODLE_PORT} ..."
+          nc -z -w5 "${MOODLE_SVC}" "${MOODLE_PORT}"
+          echo "   OK – Moodle-Service erreichbar"
+
+          echo ">> Teste PostgreSQL-Service ${POSTGRES_SVC}:${POSTGRES_PORT} ..."
+          nc -z -w5 "${POSTGRES_SVC}" "${POSTGRES_PORT}"
+          echo "   OK – PostgreSQL-Service erreichbar"
+
+          echo "=== Alle Tests bestanden ==="
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        privileged: false
+        runAsNonRoot: true
+        runAsUser: 65534       # nobody
+        capabilities:
+          drop: ["ALL"]
+  securityContext:
+    runAsNonRoot: true
+    fsGroup: 65534

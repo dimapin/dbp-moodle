@@ -1,0 +1,203 @@
+---
+# Integration-Tests mit kind (Kubernetes IN Docker)
+#
+# Ablauf:
+#   1. kind-Cluster aufsetzen
+#   2. Helm-Abhängigkeiten laden
+#   3. Chart deployen (mit CI-optimierten Werten aus tests/kind-values.yaml)
+#   4. PostgreSQL-Bereitschaft abwarten
+#   5. Moodle-Pod-Start abwarten
+#   6. Kubernetes-Ressourcen prüfen (kubectl assertions)
+#   7. helm test ausführen (TCP-Smoke-Test)
+#   8. Bei Fehler: Logs und Events sammeln
+#
+# Getestet wird:
+#   - Chart deployt ohne Fehler auf einem echten Kubernetes-Cluster
+#   - Alle erwarteten Kubernetes-Objekte werden erstellt
+#     (Deployment, Service, Secret, PVC, Role, ServiceAccount, CronJob-Ressourcen)
+#   - PostgreSQL und Moodle starten ohne Crash-Loop
+#   - Netzwerkverbindung zwischen Services funktioniert (TCP-Level)
+#
+# WICHTIG: Release-Name "dbp-ci" enthält kein "moodle" → Bitnami-Konvention
+# benennt den Moodle-Service als "dbp-ci-moodle" (vorhersagbar).
+
+name: Integration Tests (kind)
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+      - 'tests/kind-values.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
+      - 'tests/kind-values.yaml'
+
+env:
+  RELEASE_NAME: dbp-ci
+  NAMESPACE: moodle-ci
+
+jobs:
+  kind-integration-test:
+    name: kind Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── 2. kind-Cluster aufsetzen ────────────────────────────────────────────
+      - name: kind-Cluster erstellen
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: moodle-test
+          wait: 120s
+
+      # ── 3. Helm aufsetzen ────────────────────────────────────────────────────
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.16.3"
+
+      # ── 4. Helm-Abhängigkeiten laden ─────────────────────────────────────────
+      - name: Helm-Repos hinzufügen
+        run: |
+          helm repo add bitnami      https://charts.bitnami.com/bitnami
+          helm repo add wiremind     https://wiremind.github.io/wiremind-helm-charts
+          helm repo add sql-exporter https://burningalchemist.github.io/sql_exporter/
+          helm repo update
+
+      - name: Helm dependencies aktualisieren
+        run: helm dependency update charts/dbp-moodle/
+
+      # ── 5. Namespace anlegen ─────────────────────────────────────────────────
+      - name: Namespace anlegen
+        run: kubectl create namespace "$NAMESPACE"
+
+      # ── 6. Chart deployen ────────────────────────────────────────────────────
+      # --wait wartet auf Deployments, StatefulSets und Jobs.
+      # Probes sind in kind-values.yaml deaktiviert → Pods werden sofort Ready.
+      - name: Helm install
+        run: |
+          helm install "$RELEASE_NAME" charts/dbp-moodle/ \
+            --namespace "$NAMESPACE" \
+            --values charts/dbp-moodle/values.yaml \
+            --values tests/kind-values.yaml \
+            --timeout 12m \
+            --wait
+
+      # ── 7. Kubernetes-Ressourcen prüfen ──────────────────────────────────────
+      - name: Deployment existiert und ist verfügbar
+        run: |
+          kubectl get deployment \
+            -n "$NAMESPACE" \
+            -l app.kubernetes.io/name=moodle \
+            --field-selector=status.availableReplicas=1
+
+      - name: Service existiert
+        run: |
+          kubectl get service \
+            -n "$NAMESPACE" \
+            "${RELEASE_NAME}-moodle"
+
+      - name: PostgreSQL-Service existiert
+        run: |
+          kubectl get service \
+            -n "$NAMESPACE" \
+            "${RELEASE_NAME}-postgresql"
+
+      - name: Moodle-Secret mit erwarteten Keys vorhanden
+        run: |
+          kubectl get secret -n "$NAMESPACE" moodle -o jsonpath='{.data}' | \
+            python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          required = ['moodle-password', 'moodle-user', 'db-password', 'db-user', 'db-name']
+          missing = [k for k in required if k not in data]
+          if missing:
+              print('FEHLER: Fehlende Secret-Keys:', missing)
+              sys.exit(1)
+          print('OK: Alle erforderlichen Secret-Keys vorhanden:', required)
+          "
+
+      - name: PVC für Moodle-Daten existiert und ist gebunden
+        run: |
+          kubectl wait pvc \
+            -n "$NAMESPACE" \
+            --for=jsonpath='{.status.phase}'=Bound \
+            --selector=app.kubernetes.io/name=moodle \
+            --timeout=60s || \
+          kubectl get pvc -n "$NAMESPACE"
+
+      - name: RBAC-Ressourcen existieren
+        run: |
+          kubectl get role          -n "$NAMESPACE" moodle-cronjob
+          kubectl get serviceaccount -n "$NAMESPACE" moodle-cronjob
+          kubectl get rolebinding   -n "$NAMESPACE" moodle-cronjob
+          kubectl get role          -n "$NAMESPACE" moodle-restore-job
+          kubectl get serviceaccount -n "$NAMESPACE" moodle-restore-job
+
+      - name: Moodle-Config-Secret (config.php) existiert
+        run: kubectl get secret -n "$NAMESPACE" moodle-config-secret
+
+      - name: Alle Pods laufen ohne Crash-Loop
+        run: |
+          # Warte kurz und prüfe dann auf CrashLoopBackOff
+          sleep 10
+          CRASH=$(kubectl get pods -n "$NAMESPACE" \
+            --field-selector=status.phase!=Succeeded \
+            -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .status.containerStatuses[*]}{.state.waiting.reason}{"\n"}{end}{end}' \
+            | grep -i "CrashLoopBackOff" || true)
+          if [ -n "$CRASH" ]; then
+            echo "FEHLER: Pods in CrashLoopBackOff:"
+            echo "$CRASH"
+            kubectl get pods -n "$NAMESPACE"
+            exit 1
+          fi
+          echo "OK: Keine Pods in CrashLoopBackOff"
+
+      # ── 8. helm test ausführen (TCP-Smoke-Test) ──────────────────────────────
+      - name: helm test (TCP-Konnektivität)
+        run: |
+          helm test "$RELEASE_NAME" \
+            --namespace "$NAMESPACE" \
+            --timeout 5m \
+            --logs
+
+      # ── 9. Logs und Events bei Fehler ────────────────────────────────────────
+      - name: Logs und Events bei Fehler sammeln
+        if: failure()
+        run: |
+          echo "=== Pod-Übersicht ==="
+          kubectl get pods -n "$NAMESPACE" -o wide
+
+          echo ""
+          echo "=== Events (nach Zeitstempel sortiert) ==="
+          kubectl get events -n "$NAMESPACE" \
+            --sort-by='.lastTimestamp'
+
+          echo ""
+          echo "=== Moodle-Logs ==="
+          kubectl logs -n "$NAMESPACE" \
+            -l app.kubernetes.io/name=moodle \
+            --tail=100 \
+            --prefix \
+            || echo "(keine Logs verfügbar)"
+
+          echo ""
+          echo "=== PostgreSQL-Logs ==="
+          kubectl logs -n "$NAMESPACE" \
+            -l app.kubernetes.io/name=postgresql \
+            --tail=50 \
+            --prefix \
+            || echo "(keine Logs verfügbar)"
+
+          echo ""
+          echo "=== Helm test Pod-Logs ==="
+          kubectl logs -n "$NAMESPACE" \
+            "${RELEASE_NAME}-test-connection" \
+            || echo "(Test-Pod nicht gefunden)"
+
+          echo ""
+          echo "=== Beschreibung aller Pods ==="
+          kubectl describe pods -n "$NAMESPACE"

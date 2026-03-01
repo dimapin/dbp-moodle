@@ -1,0 +1,105 @@
+# Werte-Override für lokale kind-Cluster-Tests in CI.
+#
+# Ziele:
+#   - kind-kompatiblen Storage (standard, ReadWriteOnce statt NFS/ReadWriteMany)
+#   - Schnellerer Start: MOODLE_SKIP_BOOTSTRAP überspringt DB-Initialisierung
+#   - Ressourcensparend: reduzierte Requests/Limits für GitHub-Actions-Runner
+#   - Keine schweren optionalen Komponenten (ClamAV, Backup, Ingress, HPA)
+#   - Probes deaktiviert: Pod gilt als Ready ohne Moodle HTTP-Check
+#     (DB-Schema existiert nicht bei moodleSkipInstall=true)
+#
+# WICHTIG: Release-Name darf kein "moodle" enthalten (z. B. "dbp-ci"),
+# damit der Bitnami common.names.fullname-Helper den Service korrekt als
+# <release-name>-moodle benennt.
+
+global:
+  storageClass: "standard"   # kind: local-path-provisioner Standardklasse
+
+# ── dbpMoodle-spezifische Overrides ─────────────────────────────────────────
+dbpMoodle:
+  external_pvc:
+    storageClass: "standard"
+    accessModes:
+      - ReadWriteOnce           # kind unterstützt kein ReadWriteMany
+
+  allowInternalNetworkingOnly: false
+
+  # Backup und Restore im CI deaktiviert
+  backup:
+    enabled: false
+  restore:
+    enabled: false
+  moodleUpdatePreparationJob:
+    enabled: false
+
+  hpa:
+    enabled: false
+
+# ── Moodle-Subchart Overrides ────────────────────────────────────────────────
+moodle:
+  image:
+    pullPolicy: IfNotPresent   # Kein erneuter Pull bei gecachten Images
+
+  # Überspringt die Moodle-DB-Initialisierung (install.php / admin CLI).
+  # MOODLE_SKIP_BOOTSTRAP=yes → nur PHP-FPM start, kein Schema-Setup.
+  moodleSkipInstall: true
+  moodleEmail: "ci@example.de"
+
+  ingress:
+    enabled: false             # Kein Ingress-Controller in kind
+
+  service:
+    type: ClusterIP
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 2
+      memory: 2Gi
+
+  # Probes deaktiviert: Mit moodleSkipInstall=true schlägt /login/index.php
+  # fehl (kein DB-Schema), der Pod würde nie Ready werden.
+  startupProbe:
+    enabled: false
+  readinessProbe:
+    enabled: false
+  livenessProbe:
+    enabled: false
+
+  # Keine NetworkPolicy in kind (vereinfacht Networking)
+  networkPolicy:
+    enabled: false
+
+  # Apache/PHP-FPM Metriken im CI nicht benötigt
+  metrics:
+    enabled: false
+
+  # Kein Volume-Permissions Init-Container nötig (kind standard storage)
+  volumePermissions:
+    enabled: false
+
+# ── PostgreSQL ───────────────────────────────────────────────────────────────
+postgresql:
+  enabled: true
+  primary:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 1
+        memory: 512Mi
+
+# ── ClamAV deaktiviert (zu ressourcenintensiv für CI) ────────────────────────
+clamav:
+  enabled: false
+
+# ── Cronjobs deaktiviert ─────────────────────────────────────────────────────
+moodlecronjob:
+  jobs: []                     # Keine CronJob-Ressourcen im CI
+
+# ── sql-exporter deaktiviert ─────────────────────────────────────────────────
+sql-exporter:
+  enabled: false

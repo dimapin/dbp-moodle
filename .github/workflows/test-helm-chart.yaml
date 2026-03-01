@@ -1,0 +1,142 @@
+---
+# BSI IT-Grundschutz SYS.1.6 — Helm-Chart-Tests
+#
+# Dieser Workflow kombiniert drei Prüfebenen:
+#
+#   1. helm lint         — Syntaktische und strukturelle Validierung des Charts
+#   2. helm unittest     — Chart-spezifische BSI-Sicherheitstests (SecurityContext,
+#                          NetworkPolicy, RBAC, Ressourcenlimits)
+#   3. trivy config      — Automatisierter Misconfiguration-Scan nach CIS, NSA/CISA
+#                          und Pod Security Standards (mapped auf BSI SYS.1.6)
+#
+# BSI SYS.1.6-Abdeckung:
+#   A5  — Sichere Images        : trivy config (KSV013 kein :latest-Tag)
+#   A6  — Sichere Konfiguration : helm unittest + trivy config (KSV001, KSV010, KSV014)
+#   A9  — Netzwerkkommunikation : helm unittest (NetworkPolicy-Rendering)
+#   A11 — Ressourcenlimitierung : helm unittest + trivy config (KSV011, KSV018)
+#   A15 — Privileged-Container  : trivy config (KSV010)
+#   A16 — Rootless-Container    : trivy config (KSV001, KSV012)
+#   A18 — Syscall-Beschränkung  : trivy config (KSV025 — Seccomp RuntimeDefault)
+#   A20 — Minimale Capabilities : trivy config (KSV002, KSV035)
+#
+# Nicht durch Trivy abdeckbar (nur durch helm unittest):
+#   - Korrekte Konditionierung bedingter Templates (allowInternalNetworkingOnly)
+#   - Konsistenz von RBAC-Verben ohne Wildcard
+#   - Korrekte Helm-Release-spezifische Namensgebung
+
+name: Test Helm Chart
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+      - '.trivyignore.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
+      - '.trivyignore.yaml'
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 1: Helm Lint
+  # ─────────────────────────────────────────────────────────────────────────────
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.16.3"
+
+      - name: Helm lint
+        run: helm lint charts/dbp-moodle/ --values charts/dbp-moodle/values.yaml
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 2: Helm Unit Tests (BSI-spezifische Chart-Logik)
+  # ─────────────────────────────────────────────────────────────────────────────
+  helm-unittest:
+    name: Helm Unit Tests (BSI SYS.1.6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.16.3"
+
+      - name: Install helm-unittest plugin
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v0.6.2
+
+      - name: Run BSI helm unit tests
+        run: |
+          helm unittest \
+            --with-subcharts \
+            --file 'tests/bsi-*.yaml' \
+            charts/dbp-moodle/
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 3: Trivy Config Scan (BSI SYS.1.6 Misconfiguration)
+  # ─────────────────────────────────────────────────────────────────────────────
+  trivy-config-scan:
+    name: Trivy Config Scan (BSI SYS.1.6)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.16.3"
+
+      - name: Helm repos hinzufügen
+        run: |
+          helm repo add bitnami   https://charts.bitnami.com/bitnami
+          helm repo add wiremind  https://wiremind.github.io/wiremind-helm-charts
+          helm repo add sql-exporter https://burningalchemist.github.io/sql_exporter/
+          helm repo update
+
+      - name: Helm dependencies aktualisieren
+        run: helm dependency update charts/dbp-moodle/
+
+      # Trivy prüft die gerenderten Kubernetes-Manifeste auf Misconfigurations.
+      # Severity HIGH/CRITICAL → bricht Build ab (exit-code: 1).
+      # Severity MEDIUM/LOW    → wird in SARIF gemeldet, bricht Build nicht ab.
+      # Akzeptierte Ausnahmen sind in .trivyignore.yaml dokumentiert.
+      - name: Trivy config scan (HIGH/CRITICAL → Fehler)
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          scan-type: "config"
+          scan-ref: "charts/dbp-moodle/"
+          helm-values: "charts/dbp-moodle/values.yaml"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          trivyignores: ".trivyignore.yaml"
+          format: "table"
+
+      # Zweiter Lauf: alle Severities → SARIF für GitHub Security-Tab
+      - name: Trivy config scan (alle Severities → SARIF)
+        uses: aquasecurity/trivy-action@0.29.0
+        if: always()
+        with:
+          scan-type: "config"
+          scan-ref: "charts/dbp-moodle/"
+          helm-values: "charts/dbp-moodle/values.yaml"
+          severity: "CRITICAL,HIGH,MEDIUM"
+          exit-code: "0"
+          trivyignores: ".trivyignore.yaml"
+          format: "sarif"
+          output: "trivy-helm-results.sarif"
+
+      - name: Trivy SARIF-Ergebnisse in GitHub Security Tab hochladen
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-helm-results.sarif"
+          category: "helm-misconfiguration"

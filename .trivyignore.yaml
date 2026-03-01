@@ -1,0 +1,50 @@
+# Trivy Misconfiguration Ignore-Liste
+#
+# Akzeptierte Abweichungen vom Default-Regelwerk mit BSI-Begründung.
+# Jeder Eintrag dokumentiert:
+#   - BSI-Anforderung (SYS.1.6.A*)
+#   - Technische Begründung
+#   - Kompensierendes Kontroll-Maßnahme
+
+misconfigurations:
+  # ── KSV014 — readOnlyRootFilesystem ─────────────────────────────────────────
+  # BSI SYS.1.6.A6: Ein schreibgeschütztes Root-Filesystem wäre wünschenswert,
+  # ist aber für Moodle nicht umsetzbar:
+  #   - PHP-FPM schreibt temporäre Dateien (sessions, opcache, uploads)
+  #   - Moodle-Core schreibt in /opt/dbp-moodle/moodle/ (Plugin-Assets)
+  #   - Das Moodledata-Verzeichnis wird als separates Volume eingebunden
+  # Kompensierende Maßnahme:
+  #   - Container läuft als non-root (UID 1001, runAsNonRoot: true)
+  #   - Alle Linux-Capabilities werden gedroppt (capabilities.drop: [ALL])
+  #   - Seccomp-Profil RuntimeDefault ist aktiv (moodle-subchart)
+  #   - ClamAV scannt hochgeladene Dateien
+  - id: "AVD-KSV-0014"
+    paths:
+      - "charts/dbp-moodle"
+    reason: >
+      Moodle (PHP-FPM) benötigt ein beschreibbares Filesystem für Session-Daten,
+      OPcache und Plugin-Assets. Mitigiert durch non-root Ausführung, ALL-Capabilities-Drop
+      und Seccomp RuntimeDefault (BSI SYS.1.6.A6 – akzeptiertes Restrisiko).
+
+  # ── KSV020/KSV021 — UID/GID > 10000 ────────────────────────────────────────
+  # BSI SYS.1.6.A16: Für Rootless-Container ist UID/GID > 10000 empfohlen.
+  # Das Projekt nutzt UID/GID 1001, da dieser Wert in den Docker-Images fest
+  # eingebaut ist (useradd moodle -u 1001) und eine Änderung alle Dockerfiles
+  # und PVC-Berechtigungen betrifft.
+  # Kompensierende Maßnahme:
+  #   - runAsNonRoot: true ist gesetzt (Systemprüfung durch Kubernetes)
+  #   - UID 1001 ist kein System-User (nicht in /etc/passwd der meisten Distros)
+  - id: "AVD-KSV-0020"
+    paths:
+      - "charts/dbp-moodle"
+    reason: >
+      UID 1001 ist im Container-Image fest definiert. runAsNonRoot: true verhindert
+      Root-Ausführung. Migration auf UID > 10000 erfordert Image-Rebuild-Zyklus
+      (BSI SYS.1.6.A16 – geplante Verbesserung, aktuell akzeptiertes Restrisiko).
+
+  - id: "AVD-KSV-0021"
+    paths:
+      - "charts/dbp-moodle"
+    reason: >
+      GID 1001 ist im Container-Image fest definiert (fsGroup, runAsGroup).
+      Identische Begründung wie AVD-KSV-0020.

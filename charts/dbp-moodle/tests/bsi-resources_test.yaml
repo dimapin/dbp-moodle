@@ -1,0 +1,74 @@
+# BSI IT-Grundschutz SYS.1.6.A11 — Ressourcenlimitierung von Containern
+#
+# Verwandte BSI-Kriterien:
+#   SYS.1.6.A11: Für jeden Container müssen CPU- und Speicher-Limits gesetzt werden,
+#                um Denial-of-Service durch unkontrollierten Ressourcenverbrauch zu verhindern.
+#
+# Trivy-Mapping (wird durch `trivy config` ergänzend geprüft):
+#   KSV011 — CPU limits erforderlich    → SYS.1.6.A11
+#   KSV015 — CPU requests erforderlich  → SYS.1.6.A11
+#   KSV016 — Memory requests erford.    → SYS.1.6.A11
+#   KSV018 — Memory limits erforderlich → SYS.1.6.A11
+#
+# BEKANNTE LÜCKE:
+#   Der `moodle-cronjob` hat `resources: {}` (leer) als Standard-Wert.
+#   KSV011 und KSV018 werden für diesen Container von Trivy gemeldet.
+#   Empfehlung: In values.yaml unter `moodlecronjob.resources` CPU/Memory-Limits setzen.
+
+suite: "BSI SYS.1.6.A11 – Ressourcenlimitierung"
+
+tests:
+  # ── Restore-Job ──────────────────────────────────────────────────────────────
+  - it: "restore-job: CPU-Limit ist gesetzt"
+    template: templates/chart-hooks/moodle-restore-job.yaml
+    set:
+      dbpMoodle.restore.enabled: true
+    asserts:
+      - isKind:
+          of: Job
+      - isNotNull:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+
+  - it: "restore-job: Memory-Limit ist gesetzt"
+    template: templates/chart-hooks/moodle-restore-job.yaml
+    set:
+      dbpMoodle.restore.enabled: true
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.containers[0].resources.limits.memory
+
+  - it: "restore-job: CPU-Request ist gesetzt"
+    template: templates/chart-hooks/moodle-restore-job.yaml
+    set:
+      dbpMoodle.restore.enabled: true
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+
+  - it: "restore-job: Memory-Request ist gesetzt"
+    template: templates/chart-hooks/moodle-restore-job.yaml
+    set:
+      dbpMoodle.restore.enabled: true
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.containers[0].resources.requests.memory
+
+  # ── Backup-Cronjob (backup-cronjob via cronjob-subchart) ─────────────────────
+  # Die backup-cronjob-Instanz hat Ressourcen gesetzt (values.yaml backup-cronjob.resources).
+  # Für den moodle-cronjob: resources: {} → KEIN Limit gesetzt → Trivy KSV011/KSV018-Befund.
+  #
+  # TODO: Ressourcen für moodlecronjob in values.yaml setzen, dann diesen Test aktivieren:
+  #
+  # - it: "moodle-cronjob: CPU-Limit ist gesetzt (SYS.1.6.A11) [LÜCKE: resources: {} ist Standard]"
+  #   template: charts/cronjob/templates/cronjob.yml
+  #   set:
+  #     moodlecronjob.resources:
+  #       limits:
+  #         cpu: "500m"
+  #         memory: "256Mi"
+  #       requests:
+  #         cpu: "50m"
+  #         memory: "128Mi"
+  #   asserts:
+  #     - isNotNull:
+  #         path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.cpu

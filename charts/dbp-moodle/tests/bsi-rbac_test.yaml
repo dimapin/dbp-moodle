@@ -1,0 +1,129 @@
+# BSI IT-Grundschutz SYS.1.6 — RBAC / Principle of Least Privilege
+#
+# Verwandte BSI-Kriterien:
+#   SYS.1.6.A6:  Sichere Konfiguration — minimale Berechtigungen für Service-Accounts
+#   ORP.4.A12:   Verwaltung von Berechtigungen (Minimalprinzip)
+#
+# Trivy ergänzt diesen Test durch:
+#   KSV041 — No wildcard verbs in ClusterRoles/Roles
+#   KSV043 — No admin ClusterRoleBindings
+#   KSV044 — No wildcard verbs in Roles
+#
+# Geprüft wird:
+#   - RBAC-Rollen enthalten keine Wildcard-Verben ("*") und keine Wildcard-ApiGroups
+#   - Cronjob-Rolle beschränkt sich auf notwendige Pod-Operationen
+#   - Backup-Rolle beschränkt sich auf get/patch (kein delete, kein create)
+
+suite: "BSI SYS.1.6 – RBAC Least Privilege"
+
+tests:
+  # ── Cronjob-Rolle ────────────────────────────────────────────────────────────
+  - it: "cronjob-rolle: keine Wildcard-Verben"
+    template: templates/roles/moodle-cronjob-role.yaml
+    asserts:
+      - isKind:
+          of: Role
+      - notContains:
+          path: spec.rules[0].verbs
+          content: "*"
+
+  - it: "cronjob-rolle: keine Wildcard-ApiGroups"
+    template: templates/roles/moodle-cronjob-role.yaml
+    asserts:
+      - notContains:
+          path: spec.rules[0].apiGroups
+          content: "*"
+
+  - it: "cronjob-rolle: kein 'delete'-Verb (read/exec only)"
+    template: templates/roles/moodle-cronjob-role.yaml
+    asserts:
+      - notContains:
+          path: spec.rules[0].verbs
+          content: "delete"
+
+  - it: "cronjob-rolle: erlaubt Zugriff auf pods und pods/exec (für cron.php)"
+    template: templates/roles/moodle-cronjob-role.yaml
+    asserts:
+      - contains:
+          path: spec.rules[0].resources
+          content: "pods"
+      - contains:
+          path: spec.rules[0].resources
+          content: "pods/exec"
+
+  # ── Backup-Rolle ─────────────────────────────────────────────────────────────
+  - it: "backup-rolle: keine Wildcard-Verben"
+    template: templates/roles/backup-role.yaml
+    set:
+      dbpMoodle.backup.enabled: true
+    asserts:
+      - isKind:
+          of: Role
+      - notContains:
+          path: spec.rules[0].verbs
+          content: "*"
+
+  - it: "backup-rolle: kein 'delete'-Verb auf Deployments"
+    template: templates/roles/backup-role.yaml
+    set:
+      dbpMoodle.backup.enabled: true
+    asserts:
+      - notContains:
+          path: spec.rules[0].verbs
+          content: "delete"
+
+  - it: "backup-rolle: keine Wildcard-ApiGroups"
+    template: templates/roles/backup-role.yaml
+    set:
+      dbpMoodle.backup.enabled: true
+    asserts:
+      - notContains:
+          path: spec.rules[0].apiGroups
+          content: "*"
+
+  - it: "backup-rolle: nicht vorhanden wenn backup.enabled=false (Standard)"
+    template: templates/roles/backup-role.yaml
+    set:
+      dbpMoodle.backup.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ── Restore-Rolle ─────────────────────────────────────────────────────────────
+  - it: "restore-rolle: keine Wildcard-Verben"
+    template: templates/roles/restore-role.yaml
+    asserts:
+      - isKind:
+          of: Role
+      - notContains:
+          path: spec.rules[0].verbs
+          content: "*"
+
+  - it: "restore-rolle: kein 'delete'-Verb"
+    template: templates/roles/restore-role.yaml
+    asserts:
+      - notContains:
+          path: spec.rules[0].verbs
+          content: "delete"
+
+  # ── Service-Accounts ─────────────────────────────────────────────────────────
+  - it: "cronjob-serviceaccount: existiert"
+    template: templates/serviceaccounts/moodle-cronjob-serviceaccount.yaml
+    asserts:
+      - isKind:
+          of: ServiceAccount
+      - equal:
+          path: metadata.name
+          value: moodle-cronjob
+
+  - it: "backup-serviceaccount: existiert"
+    template: templates/serviceaccounts/backup-serviceaccount.yaml
+    asserts:
+      - isKind:
+          of: ServiceAccount
+
+  - it: "restore-serviceaccount: existiert"
+    template: templates/serviceaccounts/restore-serviceaccount.yaml
+    asserts:
+      - isKind:
+          of: ServiceAccount
