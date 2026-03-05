@@ -71,6 +71,16 @@ jobs:
       - name: Install helm-unittest plugin
         run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v0.6.2
 
+      - name: Helm repos hinzufügen
+        run: |
+          helm repo add bitnami   https://charts.bitnami.com/bitnami
+          helm repo add wiremind  https://wiremind.github.io/wiremind-helm-charts
+          helm repo add sql-exporter https://burningalchemist.github.io/sql_exporter/
+          helm repo update
+
+      - name: Helm dependencies aktualisieren
+        run: helm dependency update charts/dbp-moodle/
+
       - name: Run BSI helm unit tests
         run: |
           helm unittest \
