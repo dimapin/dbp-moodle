@@ -1,0 +1,86 @@
+---
+name: Test Docker Images
+
+on:
+  pull_request:
+    paths:
+      - 'moodle/**'
+      - 'moodle-tools/**'
+      - 'tests/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'moodle/**'
+      - 'moodle-tools/**'
+      - 'tests/**'
+
+env:
+  CST_VERSION: "v1.19.3"
+
+jobs:
+  test-moodle-fpm:
+    name: Test moodle (PHP-FPM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build moodle-fpm image
+        run: docker build -f moodle/Dockerfile -t moodle-fpm:test moodle/
+
+      - name: Install container-structure-test
+        run: |
+          curl -fsSL -o container-structure-test \
+            "https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}/container-structure-test-linux-amd64"
+          chmod +x container-structure-test
+          sudo mv container-structure-test /usr/local/bin/
+
+      - name: Run moodle-fpm structure tests
+        run: |
+          container-structure-test test \
+            --image moodle-fpm:test \
+            --config tests/container-structure-test-moodle.yaml
+
+  test-apache:
+    name: Test moodle (Apache)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build moodle-apache image
+        run: docker build -f moodle/Dockerfile.apache -t moodle-apache:test moodle/
+
+      - name: Install container-structure-test
+        run: |
+          curl -fsSL -o container-structure-test \
+            "https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}/container-structure-test-linux-amd64"
+          chmod +x container-structure-test
+          sudo mv container-structure-test /usr/local/bin/
+
+      - name: Run moodle-apache structure tests
+        run: |
+          container-structure-test test \
+            --image moodle-apache:test \
+            --config tests/container-structure-test-apache.yaml
+
+  test-moodle-tools:
+    name: Test moodle-tools
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build moodle-tools image
+        run: docker build -t moodle-tools:test moodle-tools/
+
+      - name: Install container-structure-test
+        run: |
+          curl -fsSL -o container-structure-test \
+            "https://github.com/GoogleContainerTools/container-structure-test/releases/download/${CST_VERSION}/container-structure-test-linux-amd64"
+          chmod +x container-structure-test
+          sudo mv container-structure-test /usr/local/bin/
+
+      - name: Run moodle-tools structure tests
+        run: |
+          container-structure-test test \
+            --image moodle-tools:test \
+            --config tests/container-structure-test-moodle-tools.yaml

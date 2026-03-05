@@ -1,0 +1,118 @@
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "apache2ctl is available"
+    command: "apache2ctl"
+    args: ["-v"]
+    expectedOutput: ["Apache"]
+
+  - name: "openssl is available"
+    command: "openssl"
+    args: ["version"]
+    expectedOutput: ["OpenSSL"]
+
+  - name: "envsubst is available"
+    command: "envsubst"
+    args: ["--version"]
+    expectedOutput: ["envsubst"]
+
+  - name: "entrypoint.sh is executable"
+    command: "test"
+    args: ["-x", "/scripts/init/apache/entrypoint.sh"]
+    exitCode: 0
+
+  - name: "apacheSetup.sh is executable"
+    command: "test"
+    args: ["-x", "/scripts/init/apache/apacheSetup.sh"]
+    exitCode: 0
+
+  - name: "apacheInstall.sh is executable"
+    command: "test"
+    args: ["-x", "/scripts/install/apacheInstall.sh"]
+    exitCode: 0
+
+  - name: "proxy_fcgi_module is enabled in apache2.conf"
+    command: "grep"
+    args: ["-E", "^LoadModule proxy_fcgi_module", "/etc/apache2/apache2.conf"]
+    expectedOutput: ["LoadModule proxy_fcgi_module"]
+
+  - name: "ssl_module is enabled in apache2.conf"
+    command: "grep"
+    args: ["-E", "^LoadModule ssl_module", "/etc/apache2/apache2.conf"]
+    expectedOutput: ["LoadModule ssl_module"]
+
+  - name: "rewrite_module is enabled in apache2.conf"
+    command: "grep"
+    args: ["-E", "^LoadModule rewrite_module", "/etc/apache2/apache2.conf"]
+    expectedOutput: ["LoadModule rewrite_module"]
+
+  - name: "proxy_module is enabled in apache2.conf"
+    command: "grep"
+    args: ["-E", "^LoadModule proxy_module", "/etc/apache2/apache2.conf"]
+    expectedOutput: ["LoadModule proxy_module"]
+
+fileExistenceTests:
+  - name: "apache2.conf"
+    path: "/etc/apache2/apache2.conf"
+    shouldExist: true
+
+  - name: "default.conf vhost (build-time generated)"
+    path: "/etc/apache2/vhosts/default.conf"
+    shouldExist: true
+
+  - name: "default-ssl.conf vhost (build-time generated)"
+    path: "/etc/apache2/vhosts/default-ssl.conf"
+    shouldExist: true
+
+  - name: "entrypoint.sh"
+    path: "/scripts/init/apache/entrypoint.sh"
+    shouldExist: true
+
+  - name: "apacheSetup.sh"
+    path: "/scripts/init/apache/apacheSetup.sh"
+    shouldExist: true
+
+  - name: "apache-env.sh"
+    path: "/scripts/init/apache/apache-env.sh"
+    shouldExist: true
+
+  - name: "default.conf.tpl template"
+    path: "/scripts/init/apache/templates/default.conf.tpl"
+    shouldExist: true
+
+  - name: "default-ssl.conf.tpl template"
+    path: "/scripts/init/apache/templates/default-ssl.conf.tpl"
+    shouldExist: true
+
+  - name: "libapache.sh"
+    path: "/scripts/libapache.sh"
+    shouldExist: true
+
+  - name: "Moodle shared data directory"
+    path: "/dbp-moodle"
+    shouldExist: true
+
+  - name: "Application base directory"
+    path: "/opt/dbp-moodle"
+    shouldExist: true
+
+fileContentTests:
+  - name: "default.conf.tpl references PHP_FPM_HOST"
+    path: "/scripts/init/apache/templates/default.conf.tpl"
+    expectedContents: ["\\$\\{PHP_FPM_HOST\\}"]
+
+  - name: "default-ssl.conf.tpl references PHP_FPM_HOST"
+    path: "/scripts/init/apache/templates/default-ssl.conf.tpl"
+    expectedContents: ["\\$\\{PHP_FPM_HOST\\}"]
+
+  - name: "apache-env.sh exports PHP_FPM_HOST"
+    path: "/scripts/init/apache/apache-env.sh"
+    expectedContents: ["PHP_FPM_HOST"]
+
+metadataTest:
+  exposedPorts:
+    - "8080"
+    - "8443"
+  user: "1001"
+  entrypoint:
+    - "/scripts/init/apache/entrypoint.sh"

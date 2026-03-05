@@ -41,11 +41,7 @@
 {{- end }}
 {{- $checksum := toYaml . | sha256sum | trunc 20 | quote }}
 ---
-{{- if semverCompare ">=1.21" $.Capabilities.KubeVersion.GitVersion }}
 apiVersion: batch/v1
-{{- else -}}
-apiVersion: batch/v1beta1
-{{- end }}
 kind: CronJob
 metadata:
   name: {{ $chart_name }}-{{ $job.name }}

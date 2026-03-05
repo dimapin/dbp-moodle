@@ -24,6 +24,10 @@ SSLSessionCacheTimeout  300
     Require all granted
   </Directory>
 
+  <FilesMatch \.php$>
+    SetHandler "proxy:fcgi://${PHP_FPM_HOST}:${PHP_FPM_PORT}"
+  </FilesMatch>
+
   # Error Documents
   ErrorDocument 503 /503.html
 

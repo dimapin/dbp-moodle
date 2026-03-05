@@ -29,7 +29,7 @@ docker-php-ext-configure zip --with-zip
 docker-php-ext-install zip
 
 docker-php-ext-install -j$(nproc) \
-    exif intl mysqli opcache pgsql soap xsl bcmath bz2 calendar exif gmp iconv intl ldap pcntl pdo pdo_mysql soap sockets tidy xsl zip
+    bcmath bz2 calendar exif gmp iconv intl ldap mysqli opcache pcntl pdo pdo_mysql pgsql soap sockets tidy xsl
 
 # GD.
 docker-php-ext-configure gd --with-freetype=/usr/include/ --with-jpeg=/usr/include/
@@ -41,11 +41,9 @@ apt-get autoremove -y
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
-# This step copies the provided php.ini template fpr production as the default php.ini whcih can be modified later on
-cp ${PHP_CONF_DIR}/php.ini-production $PHP_CONF_FILE
+# Copy the production php.ini template as the default php.ini
+cp "${PHP_CONF_DIR}/php.ini-production" "$PHP_CONF_FILE"
 
 chmod -R g+w "$PHP_CONF_DIR"
 # Fix logging issue when running as root
 ! am_i_root || chmod o+w "$(readlink /dev/stdout)" "$(readlink /dev/stderr)"
-
-# Prüfen ob wir hardening für das default PHP und unsere settings benötigen

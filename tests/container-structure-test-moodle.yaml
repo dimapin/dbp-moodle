@@ -1,0 +1,98 @@
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "PHP version is 8.2"
+    command: "php"
+    args: ["-r", "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;"]
+    expectedOutput: ["8\\.2"]
+
+  - name: "php-fpm binary is present"
+    command: "php-fpm"
+    args: ["--version"]
+    expectedOutput: ["PHP 8\\.2"]
+
+  - name: "PHP extensions: pgsql, redis, gd, ldap, intl, bcmath, opcache"
+    command: "php"
+    args: ["-m"]
+    expectedOutput: ["pgsql", "redis", "gd", "ldap", "intl", "bcmath", "Zend OPcache"]
+
+  - name: "PostgreSQL client version 13 is installed"
+    command: "psql"
+    args: ["--version"]
+    expectedOutput: ["psql.*13\\."]
+
+  - name: "moosh is available"
+    command: "moosh"
+    args: ["--version"]
+    expectedOutput: ["moosh"]
+
+  - name: "entrypoint.sh is executable"
+    command: "test"
+    args: ["-x", "/scripts/init/entrypoint.sh"]
+    exitCode: 0
+
+  - name: "pluginCheck.sh is executable"
+    command: "test"
+    args: ["-x", "/scripts/init/pluginCheck.sh"]
+    exitCode: 0
+
+  - name: "updateCheck.sh is executable"
+    command: "test"
+    args: ["-x", "/scripts/init/updateCheck.sh"]
+    exitCode: 0
+
+fileExistenceTests:
+  - name: "Moodle version.php"
+    path: "/opt/dbp-moodle/moodle/version.php"
+    shouldExist: true
+
+  - name: "Moodle index.php"
+    path: "/opt/dbp-moodle/moodle/index.php"
+    shouldExist: true
+
+  - name: "entrypoint.sh"
+    path: "/scripts/init/entrypoint.sh"
+    shouldExist: true
+
+  - name: "libdbp.sh shared library"
+    path: "/scripts/libdbp.sh"
+    shouldExist: true
+
+  - name: "pluginCheck.sh"
+    path: "/scripts/init/pluginCheck.sh"
+    shouldExist: true
+
+  - name: "updateCheck.sh"
+    path: "/scripts/init/updateCheck.sh"
+    shouldExist: true
+
+  - name: "moodleSetup.sh"
+    path: "/scripts/init/moodle/moodleSetup.sh"
+    shouldExist: true
+
+  - name: "phpSetup.sh"
+    path: "/scripts/init/php/phpSetup.sh"
+    shouldExist: true
+
+  - name: "php-env.sh"
+    path: "/scripts/init/php/php-env.sh"
+    shouldExist: true
+
+  - name: "Moodle application directory"
+    path: "/opt/dbp-moodle/moodle"
+    shouldExist: true
+
+  - name: "Moodle shared data directory"
+    path: "/dbp-moodle"
+    shouldExist: true
+
+  - name: "Plugins directory"
+    path: "/plugins"
+    shouldExist: true
+
+metadataTest:
+  exposedPorts:
+    - "9000"
+  user: "1001"
+  entrypoint:
+    - "/scripts/init/entrypoint.sh"

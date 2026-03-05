@@ -39,13 +39,13 @@ kubectl patch cronjobs "{{ .Release.Name }}"-moodlecronjob-"{{ include "moodlecr
 printf 'Scaling deployment "%s" to 0 replicas\n' "$deployment_name"
 kubectl patch "deploy/${deployment_name}" -n "{{ .Release.Namespace }}" -p '{"spec":{"replicas": 0}}'
 
-{{ if .Values.dbpMoodle.backup.enabled }}
+{{- if .Values.dbpMoodle.backup.enabled }}
 if [ "$BACKUP_ENABLED" = true ]; then
     printf 'Starting pre-update backup\n'
     kubectl create job moodle-pre-update-backup-job -n "{{ .Release.Namespace }}" --from="cronjob.batch/{{ include "backup-cronjob.job_name" . }}"
     printf 'Waiting for backup to finish...\n'
     kubectl wait --for=condition=complete --timeout=10m job/moodle-pre-update-backup-job
 fi
-{{ end }}
+{{- end }}
 
-printf 'Preparations completed successfully, exting...'
+printf 'Preparations completed successfully, exiting...\n'

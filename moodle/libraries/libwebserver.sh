@@ -40,7 +40,6 @@ web_server_execute() {
 # Returns:
 #   None
 #########################
-# Migrated
 web_server_validate() {
     local error_code=0
 
@@ -127,5 +126,5 @@ web_server_update_app_configuration() {
         esac
         shift
     done
-    web_server_execute apache "apache_update_app_configuration" "${args[@]}"
+    web_server_execute apache apache_update_app_configuration "${args[@]}"
 }

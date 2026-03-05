@@ -1,8 +1,9 @@
-{{ if and .Values.dbpMoodle.moodleUpdatePreparationJob.enabled (not .Values.dbpMoodle.restore.enabled) }}
+{{- if and .Values.dbpMoodle.moodleUpdatePreparationJob.enabled (not .Values.dbpMoodle.restore.enabled) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: "moodle-update-preparation"
+  namespace: {{ .Release.Namespace }}
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "1"
@@ -16,7 +17,10 @@ spec:
           securityContext:
             privileged: false
           command: ["/bin/bash", "/update-preparation.sh"]
-          resources: {{ .Values.dbpMoodle.moodleUpdatePreparationJob.resources | toYaml }}
+          {{- with .Values.dbpMoodle.moodleUpdatePreparationJob.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           env:
           - name: BACKUP_ENABLED
             value: '{{ .Values.dbpMoodle.backup.enabled }}'
@@ -31,8 +35,14 @@ spec:
                 - /tmp/healthy
             initialDelaySeconds: 10
             periodSeconds: 10
-      affinity: {{ .Values.dbpMoodle.moodleUpdatePreparationJob.affinity | toYaml }}
-      tolerations: {{ .Values.dbpMoodle.moodleUpdatePreparationJob.tolerations | toYaml }}
+      {{- with .Values.dbpMoodle.moodleUpdatePreparationJob.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dbpMoodle.moodleUpdatePreparationJob.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccountName: "moodle-update-preparation-hook-serviceaccount"
       restartPolicy: Never
       volumes:
@@ -41,4 +51,4 @@ spec:
             name: "moodle-update-preparation-hook-script"
             defaultMode: 0755
   ttlSecondsAfterFinished: 300
-{{ end }}
+{{- end }}

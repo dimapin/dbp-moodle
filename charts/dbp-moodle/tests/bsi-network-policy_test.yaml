@@ -1,0 +1,38 @@
+# BSI IT-Grundschutz SYS.1.6.A9 — Netzwerkkommunikation bei Containern
+#
+# Prüft, dass die optionale Egress-Beschränkung für den Moodle-Pod korrekt
+# als Kubernetes NetworkPolicy gerendert wird.
+#
+# Verwandtes BSI-Kriterium:
+#   SYS.1.6.A9: Container dürfen nur mit notwendigen Netzdiensten kommunizieren.
+#               Eingehende und ausgehende Verbindungen sollen durch NetworkPolicies
+#               auf das Notwendige reduziert werden.
+
+suite: "BSI SYS.1.6.A9 – Netzwerkkommunikation: Egress-Beschränkung"
+templates:
+  - templates/networkpolicies/disallow-all-moodle-egress.yaml
+
+tests:
+  - it: "soll eine Egress-NetworkPolicy erzeugen wenn allowInternalNetworkingOnly=true"
+    set:
+      dbpMoodle.allowInternalNetworkingOnly: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/name"]
+          value: moodle
+      - contains:
+          path: spec.policyTypes
+          content: "Egress"
+      - isNotNull:
+          path: spec.egress[0].to[0].namespaceSelector
+
+  - it: "soll KEINE Egress-NetworkPolicy erzeugen wenn allowInternalNetworkingOnly=false (Standard)"
+    set:
+      dbpMoodle.allowInternalNetworkingOnly: false
+    asserts:
+      - hasDocuments:
+          count: 0

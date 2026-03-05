@@ -65,14 +65,11 @@ IncludeOptional "${APACHE_BASE_DIR}/sites-enabled/*.conf"
 IncludeOptional "${APACHE_VHOSTS_DIR}/*.conf"
 EOF
 )"
-    ensure_apache_configuration_exists "$apache_conf_add" "TraceEnable Off" # "${APACHE_CONF_DIR}/test/test.conf"
+    ensure_apache_configuration_exists "$apache_conf_add" "TraceEnable Off"
 
     # Configure the default ports since the container is non root by default
     apache_configure_http_port "$APACHE_DEFAULT_HTTP_PORT_NUMBER"
     apache_configure_https_port "$APACHE_DEFAULT_HTTPS_PORT_NUMBER"
-
-    # Remove unnecessary directories that come with the tarball
-    # rm -rf "${APACHE_ROOT_DIR}/certs" "${APACHE_ROOT_DIR}/conf" TODO check later on
 }
 
 apache_setup_php_config() {

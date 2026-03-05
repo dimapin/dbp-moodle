@@ -40,13 +40,7 @@ done
 
 # Configure required PHP options for application to work properly, based on build-time defaults
 info "Configuring default PHP options for Moodle"
-php_conf_set extension "pgsql" # TODO check if this also works without this line of code
-
-# Copy all initially generated configuration files to the default directory
-# (this is to avoid breaking when entrypoint is being overridden)
-# TODO adjust paths
-# cp -r "/opt/bitnami/apache/conf"/* "/opt/bitnami/apache/conf.default"
-# cp -r "$APACHE_CONF_DIR/* "/opt/bitnami/apache/conf.default"
+php_conf_set extension "pgsql"
 
 # This is necessary for the libpersistence.sh scripts to work when running as non-root
 chmod g+w /opt/dbp-moodle

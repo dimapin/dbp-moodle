@@ -132,13 +132,12 @@ apache_configure_security_settings() {
     local -r server_signature_exp="s|^\s*ServerSignature\s+\w+\s*$|ServerSignature ${signature_value}|"
     local apache_configuration
 
-     if [[ -w "$APACHE_CONF_FILE" ]]; then
+    if [[ -w "$APACHE_CONF_FILE" ]]; then
         debug "Configuring Security Settings on file ${APACHE_CONF_FILE}"
         info "Apache token value ${token_value} will be configured"
-        apache_token_configuration="$(sed -E -e "$server_tokens_exp" "$APACHE_CONF_FILE")"
-        apache_server_signature_configuration="$(sed -E -e "$server_signature_exp" "$APACHE_CONF_FILE")"
-        echo "$apache_token_configuration" > "$APACHE_CONF_FILE"
-        echo "$apache_server_signature_configuration" > "$APACHE_CONF_FILE"
+        local apache_configuration
+        apache_configuration="$(sed -E -e "$server_tokens_exp" -e "$server_signature_exp" "$APACHE_CONF_FILE")"
+        echo "$apache_configuration" > "$APACHE_CONF_FILE"
     fi
 
     # This file is removed because it overwrites our own configuration and comes from apache by default
@@ -505,7 +504,7 @@ EOF
     additional_http_configuration="$(indent $'\n'"$additional_http_configuration" 2)"
     additional_https_configuration="$(indent $'\n'"$additional_https_configuration" 2)"
     htaccess_include="$(indent $'\n'"$htaccess_include" 2)"
-    acl_configuration=""$(indent $'\n'"$acl_configuration" 4)
+    acl_configuration="$(indent $'\n'"$acl_configuration" 4)"
     extra_directory_configuration="$(indent $'\n'"$extra_directory_configuration" 4)"
     proxy_configuration="$(indent $'\n'"$proxy_configuration" 2)"
     proxy_http_configuration="$(indent $'\n'"$proxy_http_configuration" 2)"
@@ -700,7 +699,6 @@ apache_update_app_configuration() {
     export https_port="$default_https_port"
     local var_name
     # Validate arguments
-    local var_name
     shift
     while [[ "$#" -gt 0 ]]; do
         case "$1" in
@@ -744,7 +742,6 @@ apache_update_app_configuration() {
         [[ -z "${http_listen_addresses:-}" ]] && http_listen_addresses="$http_listen" || http_listen_addresses="${http_listen_addresses} ${http_listen}"
         [[ -z "${https_listen_addresses:-}" ]] && https_listen_addresses="$https_listen" || https_listen_addresses="${https_listen_addresses} ${https_listen}"
     done
-    # Update configuration TODO - do we really need this? We do everything with the default configs
     local -r http_vhost="${APACHE_VHOSTS_DIR}/${app}-vhost.conf"
     local -r https_vhost="${APACHE_VHOSTS_DIR}/${app}-https-vhost.conf"
     local -r disable_suffix=".disabled"
@@ -765,7 +762,7 @@ apache_update_app_configuration() {
     rename_conf_file() {
         local -r origin="$1"
         local -r destination="$2"
-        if is_file_writable "$origin" && is_file_writable "$destination"; then
+        if ! is_file_writable "$origin" || ! is_file_writable "$destination"; then
             warn "Could not rename virtual host file '${origin}' to '${destination}' due to lack of permissions."
         else
             mv "$origin" "$destination"
