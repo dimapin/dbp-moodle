@@ -4,7 +4,7 @@
 
 This is a Helm Chart bundling some of the bitnami resources to deploy Moodle for DBildungsplattform. Extending them with features such as
 PostgreSQL support, Horizontal Autoscaling capabilities, Redis Session Store, Etherpad-Lite.
-The Chart can be deployed without any modification but it is advised to set own secrets acccording to this readme.
+The Chart can be deployed without any modification but it is advised to set own secrets according to this readme.
 
 **Homepage:** <https://dbildungsplattform.github.io/dbp-moodle/>
 
