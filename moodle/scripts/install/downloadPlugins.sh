@@ -2,6 +2,7 @@
 
 major_minor="${MOODLE_VERSION%.*}"
 plugin_index=0
+moosh_php_memory_limit="${MOOSH_PHP_MEMORY_LIMIT:-512M}"
 
 plugin_dependency_list=(
     local_wunderbyte_table # Dependency of mod_booking
@@ -144,17 +145,22 @@ download_oidc() {
 }
 
 download_oidc
-moosh plugin-list > /dev/null
+
+run_moosh() {
+    php -d "memory_limit=${moosh_php_memory_limit}" /usr/local/bin/moosh "$@"
+}
+
+run_moosh plugin-list > /dev/null
 
 for plugin in "${moodle_plugin_list[@]}"; do
     if (( $plugin_index > 0 && $plugin_index % 15 == 0 )); then
         echo "Reached batch of 15 plugins. Sleeping for 60 seconds..."
         sleep 60
     fi
-    moosh plugin-download -v "$major_minor" "$plugin"
+    run_moosh plugin-download -v "$major_minor" "$plugin"
     check_plugin_size "$plugin"
     plugin_index=$((plugin_index + 1))
 done
 
-moosh plugin-download -v 3.7 customfield_dynamic
+run_moosh plugin-download -v 3.7 customfield_dynamic
 check_plugin_size "customfield_dynamic"
