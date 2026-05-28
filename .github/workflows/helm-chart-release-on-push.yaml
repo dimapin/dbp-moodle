@@ -11,7 +11,7 @@ concurrency:
 jobs:
   build_image_on_push:
     name: "Publish image and scan with trivy"
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
     permissions:
       packages: write
       security-events: write
