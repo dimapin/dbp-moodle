@@ -91,6 +91,20 @@ download_plugin_github() {
 
     local src_dir
     src_dir=$(find . -maxdepth 1 -mindepth 1 -type d | head -1 | sed 's|^\./||')
+    if [ -z "$src_dir" ]; then
+        echo "WARNING: Could not find extracted directory in GitHub archive for '$plugin_name'." >&2
+        cd /plugins || return 1
+        rm -rf "${tmp_dir}"
+        return 1
+    fi
+
+    if ! command -v zip >/dev/null 2>&1; then
+        echo "WARNING: 'zip' command not found; cannot repackage '$plugin_name' from GitHub." >&2
+        cd /plugins || return 1
+        rm -rf "${tmp_dir}"
+        return 1
+    fi
+
     mv "${src_dir}" "${plugin_name}"
     zip -r "/plugins/${plugin_name}.zip" "${plugin_name}"
 
