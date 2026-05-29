@@ -115,7 +115,7 @@ download_plugin_github() {
 
 check_plugin_size() {
     plugin_name=$1
-    plugin_size=$(stat -c%s "/plugins/${plugin_name}.zip")
+    plugin_size=$(stat -c%s "/plugins/${plugin_name}.zip" 2>/dev/null || echo 0)
     if [ "$plugin_size" -eq 0 ]; then
         echo "WARNING: Moodle Plugin '$plugin_name' is empty (size 0 bytes). Trying GitHub fallback..." >&2
         rm -f "/plugins/${plugin_name}.zip"

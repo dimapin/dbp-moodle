@@ -20,7 +20,7 @@ jobs:
     with:
       image_name: "moodle"
       run_trivy_scan: false
-      image_tag_generation: ticket_from_branch
+      image_tag_generation: commit_hash
       add_latest_tag: false
       container_registry: "ghcr.io"
       fail_on_vulnerabilites: false
