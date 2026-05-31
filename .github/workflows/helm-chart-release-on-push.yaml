@@ -27,6 +27,10 @@ jobs:
       context: "./moodle/"
 
   release_helm:
+    needs: build_image_on_push
+    if: ${{ github.repository_owner == 'dBildungsplattform' }}
+    permissions:
+      contents: read
     uses: dBildungsplattform/dbp-github-workflows/.github/workflows/chart-release.yaml@7
     secrets: inherit
     with:
