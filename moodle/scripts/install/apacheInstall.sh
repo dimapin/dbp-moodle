@@ -84,6 +84,13 @@ EOF
 apache_setup_config
 apache_setup_php_config
 
+# Update Debian's apache2 envvars to use the container user (moodle, UID 1001)
+# instead of the default www-data. The Debian apache2ctl script sources this
+# file and unconditionally chowns runtime sockets to APACHE_RUN_USER; running
+# as a non-root user we can only chown to ourselves, so the user must match.
+sed -i 's/^export APACHE_RUN_USER=.*/export APACHE_RUN_USER=moodle/' /etc/apache2/envvars
+sed -i 's/^export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=moodle/' /etc/apache2/envvars
+
 # Ensure non-root user has write permissions on a set of directories
 chmod -R g+w "$APACHE_BASE_DIR"
 for dir in "$APACHE_CONF_DIR" "$APACHE_LOGS_DIR" "$APACHE_VHOSTS_DIR" "$APACHE_DEFAULT_CONF_DIR"; do
