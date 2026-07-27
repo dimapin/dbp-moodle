@@ -217,7 +217,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | etherpad-postgresql.auth.username | string | `"etherpad"` |  |
 | etherpad-postgresql.enabled | bool | `false` |  |
 | etherpad-postgresql.image.repository | string | `"bitnamilegacy/postgresql"` |  |
-| etherpad-postgresql.image.tag | string | `"14.18.0-debian-12-r0"` |  |
+| etherpad-postgresql.image.tag | string | `"16.6.0-debian-12-r2"` |  |
 | etherpad-postgresql.metrics.image.repository | string | `"bitnamilegacy/postgres-exporter"` |  |
 | etherpad-postgresql.persistence.existingClaim | string | `"moodle-etherpad-postgresql"` |  |
 | etherpad-postgresql.primary.affinity | object | `{}` |  |
@@ -342,7 +342,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | moodle.image.pullPolicy | string | `"Always"` |  |
 | moodle.image.registry | string | `"ghcr.io"` |  |
 | moodle.image.repository | string | `"dbildungsplattform/moodle"` |  |
-| moodle.image.tag | string | `"4.5.12-fpm-trixie-8.2.31-dbp2"` | The dbp-moodle image which is build for this helm chart |
+| moodle.image.tag | string | `"4.5.12-fpm-trixie-8.3.32-dbp1"` | The dbp-moodle image which is build for this helm chart |
 | moodle.ingress.annotations."cert-manager.io/cluster-issuer" | string | `"sc-cert-manager-clusterissuer-letsencrypt"` |  |
 | moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-body-size" | string | `"201M"` |  |
 | moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-connect-timeout" | string | `"30s"` |  |
@@ -424,7 +424,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | postgresql.auth.username | string | `"moodle"` |  |
 | postgresql.enabled | bool | `true` |  |
 | postgresql.image.repository | string | `"bitnamilegacy/postgresql"` |  |
-| postgresql.image.tag | string | `"14.18.0-debian-12-r0"` |  |
+| postgresql.image.tag | string | `"16.6.0-debian-12-r2"` |  |
 | postgresql.metrics.enabled | bool | `true` |  |
 | postgresql.metrics.image.repository | string | `"bitnamilegacy/postgres-exporter"` |  |
 | postgresql.metrics.serviceMonitor.enabled | bool | `true` |  |

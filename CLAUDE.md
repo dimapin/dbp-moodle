@@ -4,16 +4,18 @@ Dieses Dokument gibt Claude Code den nötigen Kontext für die Arbeit in diesem 
 
 ## Projektübersicht
 
-**dbp-moodle** stellt Moodle LMS (v4.5.10, PHP 8.2.30-FPM) für die dBildungsplattform auf Kubernetes bereit.  
-Chart-Version 1.1.2 · Helm ≥ 3.16.3 · Kubernetes ≥ 1.25 · Lizenz Apache-2.0.  
+**dbp-moodle** stellt Moodle LMS (v4.5.12, PHP 8.3.32-FPM) für die dBildungsplattform auf Kubernetes bereit.  
+Chart-Version 1.6.2 · Helm ≥ 3.16.3 · Kubernetes ≥ 1.25 · Lizenz Apache-2.0.  
 Das Repo enthält folgende Hauptkomponenten:
 
-| Komponente | Pfad | Zweck |
-|---|---|---|
-| PHP-FPM + Moodle | `moodle/Dockerfile` | Moodle-Applikationscontainer (Port 9000) |
-| Apache | `moodle/Dockerfile.apache` | Webserver, proxied zu PHP-FPM (Port 8080/8443) |
-| moodle-tools | `moodle-tools/Dockerfile` | Hilfsimage für CronJobs (Backup, Restore) |
-| Helm-Chart | `charts/dbp-moodle/` | Kubernetes-Deployment (inkl. Subcharts) |
+| Komponente | Pfad | Basis | Zweck |
+|---|---|---|---|
+| PHP-FPM + Moodle | `moodle/Dockerfile` | `php:8.3.32-fpm-trixie` | Moodle-Applikationscontainer (Port 9000) |
+| Apache | `moodle/Dockerfile.apache` | `debian:bookworm-slim` (digest-gepinnt) | Webserver, proxied zu PHP-FPM (Port 8080/8443) |
+| moodle-tools | `moodle-tools/Dockerfile` | `bitnami/minideb:trixie` (digest-gepinnt) | Hilfsimage für CronJobs (Backup, Restore), aktuell Tag `1.1.15` |
+| Helm-Chart | `charts/dbp-moodle/` | – | Kubernetes-Deployment (inkl. Subcharts) |
+
+> **Hinweis:** Seit Chart 1.6.0 laufen Moodle- und Tools-Image auf Debian 13 (Trixie). Das Apache-Image steht noch auf Debian 12 (Bookworm) und ist damit der letzte offene Punkt der Trixie-Migration.
 
 Beide Moodle-Container teilen sich ein gemeinsames **ReadWriteMany**-Volume (StorageClass `nfs-client`, Standard 8 Gi):
 - `/dbp-moodle/moodle` — Moodle-Quellcode
@@ -102,6 +104,7 @@ helm-docs --chart-search-root charts/
 | `charts/dbp-moodle/values.yaml` | Alle Helm-Konfigurationswerte |
 | `charts/dbp-moodle/values.schema.json` | JSON-Schema zur Values-Validierung |
 | `charts/dbp-moodle/Chart.yaml` | Chart-Metadaten und Abhängigkeiten |
+| `charts/dbp-moodle/CHANGELOG.md` | Chart-Änderungshistorie — bei jedem Release pflegen |
 | `.trivyignore.yaml` | Dokumentierte BSI-Sicherheitsausnahmen mit Begründungen |
 | `tests/kind-values.yaml` | Values für KinD-Integrationstests |
 
@@ -111,7 +114,9 @@ helm-docs --chart-search-root charts/
 PHP-FPM und Apache laufen in **getrennten Containern**. Apache kennt den PHP-FPM-Host via `PHP_FPM_HOST`-Umgebungsvariable. Beide Container benötigen dasselbe Volume (`ReadWriteMany`).
 
 ### Plugins werden zur Build-Zeit installiert
-Plugins werden in `downloadPlugins.sh` heruntergeladen und ins Image gebacken — **nicht** zur Laufzeit. Reihenfolge ist abhängigkeitsgesteuert (z. B. `local_wunderbyte_table` vor `mod_booking`). Plugin-Liste ist über `global.moodlePlugins` in den Helm-Values steuerbar.
+Plugins werden in `downloadPlugins.sh` aus dem Moodle Marketplace heruntergeladen und ins Image gebacken — **nicht** zur Laufzeit. Reihenfolge ist abhängigkeitsgesteuert: `plugin_dependency_list` (z. B. `tool_certificate`, `qbehaviour_*`) wird vor `plugin_list` installiert. Plugin-Liste ist über `global.moodlePlugins` in den Helm-Values steuerbar.
+
+`mod_booking` ist derzeit **nicht** im Image enthalten (über keine Bezugsquelle verfügbar, `download_booking` ist auskommentiert). `auth_oidc` wird als Sonderfall aus Branch `v_45` von `dBildungsplattform/dbp-moodle-plugin-oidc` gebaut.
 
 ### Cron läuft außerhalb der Haupt-Pods
 `cron.php` wird in separaten **CronJob-Pods** ausgeführt, nicht innerhalb der Moodle-Container. Während Updates wird der Cron automatisch deaktiviert und danach reaktiviert.

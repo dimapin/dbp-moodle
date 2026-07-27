@@ -1,4 +1,4 @@
-FROM php:8.2.31-fpm-trixie AS build
+FROM php:8.3.32-fpm-trixie AS build
 USER root
 ARG MOODLE_VERSION=${MOODLE_VERSION:-"4.5.12"}
 #This is the path moodle will be placed after downloading for our Moodle Update Pipeline
@@ -27,12 +27,12 @@ RUN apt-get update && apt-get upgrade -y && \
     pecl install redis && \
     docker-php-ext-enable redis
 
-# Install psql Version 13.x like in the other bitnami moodle image
+# Install psql client 16 to match Moodle 5.2+ minimum PostgreSQL requirements
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 
 RUN apt-get update && \
-    apt-get install -y postgresql-client-13
+    apt-get install -y postgresql-client-16
 
 # Install apache2 and its dependencies
 RUN apt-get install -y libapr1 libaprutil1 libc6 libaprutil1-dbd-sqlite3 libcurl4 libaprutil1-ldap libexpat1 liblua5.3-0 libssl3 libxml2 media-types procps
