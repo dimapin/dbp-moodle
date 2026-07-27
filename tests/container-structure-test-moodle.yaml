@@ -22,8 +22,8 @@ commandTests:
     expectedOutput: ["psql.*16\\."]
 
   - name: "moosh is available"
-    command: "moosh"
-    args: ["--version"]
+    command: "sh"
+    args: ["-c", "command -v moosh"]
     expectedOutput: ["moosh"]
 
   - name: "entrypoint.sh is executable"
