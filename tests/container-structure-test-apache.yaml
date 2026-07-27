@@ -1,8 +1,8 @@
 schemaVersion: "2.0.0"
 
 commandTests:
-  - name: "apache2ctl is available"
-    command: "apache2ctl"
+  - name: "apache2 is available"
+    command: "apache2"
     args: ["-v"]
     expectedOutput: ["Apache"]
 
