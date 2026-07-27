@@ -23,8 +23,8 @@ commandTests:
 
   - name: "moosh is available"
     command: "moosh"
-    args: ["--version"]
-    expectedOutput: ["moosh"]
+    args: ["--help"]
+    expectedOutput: ["[Mm]oosh"]
 
   - name: "entrypoint.sh is executable"
     command: "test"
