@@ -15,7 +15,6 @@ plugin_dependency_list=(
 
 plugin_list=(
     # mod_booking   custom download logic from gh until it is available via marketplace/directory 
-    theme_boost_magnific
     theme_boost_union
     mod_choicegroup
     mod_coursecertificate
