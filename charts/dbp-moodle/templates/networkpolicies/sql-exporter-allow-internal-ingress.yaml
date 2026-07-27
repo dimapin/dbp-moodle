@@ -1,0 +1,22 @@
+{{- if and .Values.dbpMoodle.networkPolicies.enabled (index .Values "sql-exporter").enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sql-exporter-allow-internal-ingress
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sql-exporter
+      app.kubernetes.io/instance: "{{ .Release.Name }}"
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+        {{- with .Values.dbpMoodle.networkPolicies.monitoringNamespaceLabels }}
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+        {{- end }}
+{{- end }}

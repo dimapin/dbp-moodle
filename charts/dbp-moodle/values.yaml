@@ -102,6 +102,17 @@ dbpMoodle:
   # -- disallows all egress from release namespace for the moodle deployment
   allowInternalNetworkingOnly: false
 
+  # -- Ingress-NetworkPolicies for backing services (PostgreSQL, Redis, ClamAV, Etherpad, sql-exporter).
+  # -- Restricts east-west traffic to pods of the release namespace (BSI SYS.1.6). Requires a CNI with NetworkPolicy support.
+  networkPolicies:
+    enabled: false
+    # -- Namespace labels of the monitoring stack (e.g. {kubernetes.io/metadata.name: monitoring}).
+    # -- Required for cross-namespace scraping of metrics endpoints when enabled, otherwise scraping is blocked.
+    monitoringNamespaceLabels: {}
+    # -- Namespace labels of the ingress controller (e.g. {kubernetes.io/metadata.name: ingress-nginx}).
+    # -- Required for the etherpad ingress to keep working when enabled.
+    ingressNamespaceLabels: {}
+
   # -- use a configmap to determine which system plugins should be uninstalled --
   uninstallSystemPlugins: false
 
@@ -164,6 +175,19 @@ dbpMoodle:
     affinity: {}
     tolerations: []
     resources: {}
+    podSecurityContext:
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      capabilities:
+        drop:
+          - ALL
     # -- Which kubectl image to use
     repository: "ghcr.io/dbildungsplattform"
     image: "moodle-tools"
@@ -233,10 +257,14 @@ dbpMoodle:
         memory: 2Gi
     podSecurityContext:
       fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
     securityContext:
       privileged: false
       allowPrivilegeEscalation: false
+      runAsUser: 1001
       runAsGroup: 1001
+      runAsNonRoot: true
       capabilities:
         drop:
           - ALL
@@ -453,8 +481,21 @@ postgresql:
   primary:
     extendedConfiguration: |
       max_connections = 800
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
     containerSecurityContext:
+      enabled: true
       privileged: false
+      allowPrivilegeEscalation: false
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      capabilities:
+        drop:
+          - ALL
     affinity: {}
     tolerations: []
     resources:
@@ -544,8 +585,19 @@ etherpadlite:
       - secretName: "etherpad.example.de-tls"
         hosts:
           - "etherpad.example.de"
+  podSecurityContext:
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
+    allowPrivilegeEscalation: false
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
   affinity: {}
   tolerations: []
   resources:
@@ -579,8 +631,21 @@ etherpad-postgresql:
   persistence:
     existingClaim: "moodle-etherpad-postgresql"
   primary:
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
     containerSecurityContext:
+      enabled: true
       privileged: false
+      allowPrivilegeEscalation: false
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      capabilities:
+        drop:
+          - ALL
     affinity: {}
     tolerations: []
     resources:
@@ -602,6 +667,8 @@ moodlecronjob:
     create: false
   podSecurityContext:
     fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
     allowPrivilegeEscalation: false
@@ -677,7 +744,7 @@ backup-cronjob:
       valueFrom:
         secretKeyRef:
           name: moodle
-          key: mariadb-password
+          key: db-password
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
@@ -723,10 +790,14 @@ backup-cronjob:
         defaultMode: 0644
   podSecurityContext:
     fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
     allowPrivilegeEscalation: false
+    runAsUser: 1001
     runAsGroup: 1001
+    runAsNonRoot: true
     capabilities:
       drop:
         - ALL
@@ -780,6 +851,8 @@ clamav:
     runAsUser: 1001
     runAsGroup: 1001
     fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     allowPrivilegeEscalation: false
     runAsNonRoot: true
@@ -803,9 +876,19 @@ sql-exporter:
   enabled: false
   image:
     pullPolicy: "IfNotPresent"
+  podSecurityContext:
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
     allowPrivilegeEscalation: false
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
   affinity: {}
   tolerations: []
   resources: {}

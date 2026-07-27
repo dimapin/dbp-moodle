@@ -8,12 +8,11 @@
 #               Eingehende und ausgehende Verbindungen sollen durch NetworkPolicies
 #               auf das Notwendige reduziert werden.
 
-suite: "BSI SYS.1.6.A9 – Netzwerkkommunikation: Egress-Beschränkung"
-templates:
-  - templates/networkpolicies/disallow-all-moodle-egress.yaml
+suite: "BSI SYS.1.6.A9 – Netzwerkkommunikation: Egress- und Ingress-Beschränkung"
 
 tests:
   - it: "soll eine Egress-NetworkPolicy erzeugen wenn allowInternalNetworkingOnly=true"
+    template: templates/networkpolicies/disallow-all-moodle-egress.yaml
     set:
       dbpMoodle.allowInternalNetworkingOnly: true
     asserts:
@@ -31,8 +30,102 @@ tests:
           path: spec.egress[0].to[0].namespaceSelector
 
   - it: "soll KEINE Egress-NetworkPolicy erzeugen wenn allowInternalNetworkingOnly=false (Standard)"
+    template: templates/networkpolicies/disallow-all-moodle-egress.yaml
     set:
       dbpMoodle.allowInternalNetworkingOnly: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ── Ingress-Beschränkung für Backing-Services (dbpMoodle.networkPolicies) ────
+  - it: "postgresql: Ingress nur aus dem Release-Namespace auf Port 5432"
+    template: templates/networkpolicies/postgresql-allow-internal-ingress.yaml
+    set:
+      dbpMoodle.networkPolicies.enabled: true
+      postgresql.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/name"]
+          value: postgresql
+      - contains:
+          path: spec.policyTypes
+          content: "Ingress"
+      - isNotNull:
+          path: spec.ingress[0].from[0].podSelector
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 5432
+
+  - it: "postgresql: Metrics-Port 9187 nur bei gesetzten monitoringNamespaceLabels"
+    template: templates/networkpolicies/postgresql-allow-internal-ingress.yaml
+    set:
+      dbpMoodle.networkPolicies.enabled: true
+      dbpMoodle.networkPolicies.monitoringNamespaceLabels:
+        kubernetes.io/metadata.name: monitoring
+      postgresql.enabled: true
+    asserts:
+      - equal:
+          path: spec.ingress[1].ports[0].port
+          value: 9187
+      - equal:
+          path: spec.ingress[1].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: monitoring
+
+  - it: "etherpad: Ingress aus Release-Namespace und Ingress-Controller-Namespace auf Port 9001"
+    template: templates/networkpolicies/etherpad-allow-internal-ingress.yaml
+    set:
+      dbpMoodle.networkPolicies.enabled: true
+      etherpadlite.enabled: true
+      dbpMoodle.networkPolicies.ingressNamespaceLabels:
+        kubernetes.io/metadata.name: ingress-nginx
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/name"]
+          value: etherpad
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 9001
+      - equal:
+          path: spec.ingress[0].from[1].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: ingress-nginx
+
+  - it: "clamav: Ingress nur aus dem Release-Namespace auf Port 3310"
+    template: templates/networkpolicies/clamav-allow-internal-ingress.yaml
+    set:
+      dbpMoodle.networkPolicies.enabled: true
+      clamav.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 3310
+
+  - it: "redis: Ingress nur aus dem Release-Namespace auf Port 6379"
+    template: templates/networkpolicies/redis-allow-internal-ingress.yaml
+    set:
+      dbpMoodle.networkPolicies.enabled: true
+      redis.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 6379
+
+  - it: "soll KEINE Ingress-NetworkPolicies erzeugen wenn networkPolicies.enabled=false (Standard)"
+    templates:
+      - templates/networkpolicies/postgresql-allow-internal-ingress.yaml
+      - templates/networkpolicies/redis-allow-internal-ingress.yaml
+      - templates/networkpolicies/clamav-allow-internal-ingress.yaml
+      - templates/networkpolicies/etherpad-allow-internal-ingress.yaml
+      - templates/networkpolicies/sql-exporter-allow-internal-ingress.yaml
     asserts:
       - hasDocuments:
           count: 0
