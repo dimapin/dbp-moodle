@@ -29,7 +29,7 @@ Moodle(TM) LMS is an open source online Learning Management System widely used a
 | containerSecurityContext.enabled | bool | `true` |  |
 | containerSecurityContext.privileged | bool | `false` |  |
 | containerSecurityContext.readOnlyRootFilesystem | bool | `false` |  |
-| containerSecurityContext.runAsGroup | int | `0` |  |
+| containerSecurityContext.runAsGroup | int | `1001` |  |
 | containerSecurityContext.runAsNonRoot | bool | `true` |  |
 | containerSecurityContext.runAsUser | int | `1001` |  |
 | containerSecurityContext.seLinuxOptions | object | `{}` |  |

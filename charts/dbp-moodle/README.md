@@ -50,7 +50,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.env[3].valueFrom.secretKeyRef.key | string | `"user"` |  |
 | backup-cronjob.env[3].valueFrom.secretKeyRef.name | string | `"moodle-database"` |  |
 | backup-cronjob.env[4].name | string | `"DATABASE_PASSWORD"` |  |
-| backup-cronjob.env[4].valueFrom.secretKeyRef.key | string | `"db-password"` |  |
+| backup-cronjob.env[4].valueFrom.secretKeyRef.key | string | `"mariadb-password"` |  |
 | backup-cronjob.env[4].valueFrom.secretKeyRef.name | string | `"moodle"` |  |
 | backup-cronjob.env[5].name | string | `"DATABASE_HOST_ETHERPAD"` |  |
 | backup-cronjob.env[5].valueFrom.secretKeyRef.key | string | `"host"` |  |
