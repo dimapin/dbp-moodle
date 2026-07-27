@@ -41,7 +41,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.env[3].valueFrom.secretKeyRef.key | string | `"user"` |  |
 | backup-cronjob.env[3].valueFrom.secretKeyRef.name | string | `"moodle-database"` |  |
 | backup-cronjob.env[4].name | string | `"DATABASE_PASSWORD"` |  |
-| backup-cronjob.env[4].valueFrom.secretKeyRef.key | string | `"mariadb-password"` |  |
+| backup-cronjob.env[4].valueFrom.secretKeyRef.key | string | `"db-password"` |  |
 | backup-cronjob.env[4].valueFrom.secretKeyRef.name | string | `"moodle"` |  |
 | backup-cronjob.env[5].name | string | `"AWS_ACCESS_KEY_ID"` |  |
 | backup-cronjob.env[5].valueFrom.secretKeyRef.key | string | `"s3_access_key"` |  |
@@ -85,6 +85,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.jobs[0].schedule | string | `"0 3 * * *"` |  |
 | backup-cronjob.jobs[0].successfulJobsHistoryLimit | int | `1` |  |
 | backup-cronjob.podSecurityContext.fsGroup | int | `1001` |  |
+| backup-cronjob.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | backup-cronjob.resources.limits.cpu | string | `"2000m"` |  |
 | backup-cronjob.resources.limits.memory | string | `"4Gi"` |  |
 | backup-cronjob.resources.requests.cpu | string | `"500m"` |  |
@@ -93,6 +94,8 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | backup-cronjob.securityContext.privileged | bool | `false` |  |
 | backup-cronjob.securityContext.runAsGroup | int | `1001` |  |
+| backup-cronjob.securityContext.runAsNonRoot | bool | `true` |  |
+| backup-cronjob.securityContext.runAsUser | int | `1001` |  |
 | backup-cronjob.serviceAccount.create | bool | `false` |  |
 | backup-cronjob.serviceAccount.name | string | `"moodle-backup-job"` |  |
 | backup-cronjob.tolerations | list | `[]` |  |
@@ -107,6 +110,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | clamav.podSecurityContext.runAsGroup | int | `1001` |  |
 | clamav.podSecurityContext.runAsNonRoot | bool | `true` |  |
 | clamav.podSecurityContext.runAsUser | int | `1001` |  |
+| clamav.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | clamav.resources.limits.cpu | string | `"1000m"` |  |
 | clamav.resources.limits.memory | string | `"4Gi"` |  |
 | clamav.resources.requests.cpu | string | `"200m"` |  |
@@ -150,10 +154,13 @@ The Chart can be deployed without any modification but it is advised to set own 
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[2] | string | `"create"` |  |
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[3] | string | `"patch"` |  |
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[4] | string | `"watch"` |  |
-| dbpMoodle.moodleUpdatePreparationJob | object | `{"affinity":{},"enabled":false,"image":"moodle-tools","repository":"ghcr.io/dbildungsplattform","resources":{},"tag":"1.1.14","tolerations":[]}` | A preperation job which disables the php-cronjob, scales down the deployment and creates a backup if dbpMoodle.backup.enabled=true |
+| dbpMoodle.moodleUpdatePreparationJob | object | `{"affinity":{},"enabled":false,"image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"repository":"ghcr.io/dbildungsplattform","resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.14","tolerations":[]}` | A preperation job which disables the php-cronjob, scales down the deployment and creates a backup if dbpMoodle.backup.enabled=true |
 | dbpMoodle.moodleUpdatePreparationJob.repository | string | `"ghcr.io/dbildungsplattform"` | Which kubectl image to use |
 | dbpMoodle.moodlecronjob | object | `{"rules":[{"apiGroups":[""],"resources":["pods","pods/exec"],"verbs":["get","list","create","watch"]}],"wait_timeout":"15m"}` | Configuration for the moodle-cronjob which runs moodles cron.php. This is required since moodle does not run as root |
 | dbpMoodle.name | string | `"infra"` |  |
+| dbpMoodle.networkPolicies | object | `{"enabled":false,"ingressNamespaceLabels":{},"monitoringNamespaceLabels":{}}` | Ingress-NetworkPolicies for backing services (PostgreSQL, Redis, ClamAV, Etherpad, sql-exporter). -- Restricts east-west traffic to pods of the release namespace (BSI SYS.1.6). Requires a CNI with NetworkPolicy support. |
+| dbpMoodle.networkPolicies.ingressNamespaceLabels | object | `{}` | Namespace labels of the ingress controller (e.g. {kubernetes.io/metadata.name: ingress-nginx}). -- Required for the etherpad ingress to keep working when enabled. |
+| dbpMoodle.networkPolicies.monitoringNamespaceLabels | object | `{}` | Namespace labels of the monitoring stack (e.g. {kubernetes.io/metadata.name: monitoring}). -- Required for cross-namespace scraping of metrics endpoints when enabled, otherwise scraping is blocked. |
 | dbpMoodle.phpConfig.additional | string | `""` | Any additional text to be included into the config.php |
 | dbpMoodle.phpConfig.additionalPhpIni | string | `"memory_limit = 513M\nupload_max_filesize = 201M\npost_max_size = 150M\n"` | A string filled with additional php.ini configuration that overwrites the default one |
 | dbpMoodle.phpConfig.debug | bool | `false` | Moodle debugging is not safe for production |
@@ -163,7 +170,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | dbpMoodle.phpConfig.ip.blocked | string | `""` |  |
 | dbpMoodle.phpConfig.pluginUIInstallation | object | `{"enabled":false}` | Prevents the installation of Plugins from the Moodle Web Interface for Admins (Disabled by default) |
 | dbpMoodle.redis | object | `{"host":"moodle-redis-master","port":6379}` | Configurations for the optional redis |
-| dbpMoodle.restore | object | `{"affinity":{},"enabled":false,"existingSecretDatabaseConfig":"moodle-database","existingSecretDatabasePassword":"moodle","existingSecretGPG":"","existingSecretKeyDatabasePassword":"","existingSecretKeyS3Access":"","existingSecretKeyS3Secret":"","existingSecretS3":"","image":"moodle-tools","podSecurityContext":{"fsGroup":1001},"repository":"ghcr.io/dbildungsplattform","resources":{"limits":{"cpu":"2000m","memory":"4Gi"},"requests":{"cpu":"1000m","memory":"2Gi"}},"restoreDate":"","rules":[{"apiGroups":["apps"],"resources":["deployments/scale","deployments"],"verbs":["get","list","patch"]}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001},"tag":"1.1.14","tolerations":[]}` | This restores moodle to the latest snapshot. Requires an existing s3 backup. ONLY USE FOR ROLLBACK |
+| dbpMoodle.restore | object | `{"affinity":{},"enabled":false,"existingSecretDatabaseConfig":"moodle-database","existingSecretDatabasePassword":"moodle","existingSecretGPG":"","existingSecretKeyDatabasePassword":"","existingSecretKeyS3Access":"","existingSecretKeyS3Secret":"","existingSecretS3":"","image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"repository":"ghcr.io/dbildungsplattform","resources":{"limits":{"cpu":"2000m","memory":"4Gi"},"requests":{"cpu":"1000m","memory":"2Gi"}},"restoreDate":"","rules":[{"apiGroups":["apps"],"resources":["deployments/scale","deployments"],"verbs":["get","list","patch"]}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.14","tolerations":[]}` | This restores moodle to the latest snapshot. Requires an existing s3 backup. ONLY USE FOR ROLLBACK |
 | dbpMoodle.secrets | object | `{"database_admin_password":"","database_name":"","database_password":"","database_root_password":"","database_user":"","etherpad_api_key":"","etherpad_postgresql_password":"","moodle_password":"","moodle_user":"","redis_password":"","useChartSecret":true}` | Creates a secret with all relevant credentials for moodle -- Set useChartSecret: false to provide your own secret -- If you create your own secret, also set moodle.existingSecret (and moodle.externalDatabase.existingSecret if you bring your own DB) |
 | dbpMoodle.stage | string | `"infra"` |  |
 | dbpMoodle.uninstallSystemPlugins | bool | `false` |  |
@@ -178,7 +185,16 @@ The Chart can be deployed without any modification but it is advised to set own 
 | etherpad-postgresql.metrics.image.repository | string | `"bitnamilegacy/postgres-exporter"` |  |
 | etherpad-postgresql.persistence.existingClaim | string | `"moodle-etherpad-postgresql"` |  |
 | etherpad-postgresql.primary.affinity | object | `{}` |  |
+| etherpad-postgresql.primary.containerSecurityContext.allowPrivilegeEscalation | bool | `false` |  |
+| etherpad-postgresql.primary.containerSecurityContext.capabilities.drop[0] | string | `"ALL"` |  |
+| etherpad-postgresql.primary.containerSecurityContext.enabled | bool | `true` |  |
 | etherpad-postgresql.primary.containerSecurityContext.privileged | bool | `false` |  |
+| etherpad-postgresql.primary.containerSecurityContext.runAsGroup | int | `1001` |  |
+| etherpad-postgresql.primary.containerSecurityContext.runAsNonRoot | bool | `true` |  |
+| etherpad-postgresql.primary.containerSecurityContext.runAsUser | int | `1001` |  |
+| etherpad-postgresql.primary.podSecurityContext.enabled | bool | `true` |  |
+| etherpad-postgresql.primary.podSecurityContext.fsGroup | int | `1001` |  |
+| etherpad-postgresql.primary.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | etherpad-postgresql.primary.resources.limits.cpu | string | `"1000m"` |  |
 | etherpad-postgresql.primary.resources.limits.memory | string | `"1Gi"` |  |
 | etherpad-postgresql.primary.resources.requests.cpu | string | `"50m"` |  |
@@ -211,11 +227,18 @@ The Chart can be deployed without any modification but it is advised to set own 
 | etherpadlite.ingress.hosts[0].paths[0].pathType | string | `"Prefix"` |  |
 | etherpadlite.ingress.tls[0].hosts[0] | string | `"etherpad.example.de"` |  |
 | etherpadlite.ingress.tls[0].secretName | string | `"etherpad.example.de-tls"` |  |
+| etherpadlite.podSecurityContext.fsGroup | int | `1001` |  |
+| etherpadlite.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | etherpadlite.resources.limits.cpu | string | `"1000m"` |  |
 | etherpadlite.resources.limits.memory | string | `"1Gi"` |  |
 | etherpadlite.resources.requests.cpu | string | `"100m"` |  |
 | etherpadlite.resources.requests.memory | string | `"128Mi"` |  |
+| etherpadlite.securityContext.allowPrivilegeEscalation | bool | `false` |  |
+| etherpadlite.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | etherpadlite.securityContext.privileged | bool | `false` |  |
+| etherpadlite.securityContext.runAsGroup | int | `1001` |  |
+| etherpadlite.securityContext.runAsNonRoot | bool | `true` |  |
+| etherpadlite.securityContext.runAsUser | int | `1001` |  |
 | etherpadlite.tolerations | list | `[]` |  |
 | etherpadlite.volumeMounts[0].mountPath | string | `"/opt/etherpad-lite/APIKEY.txt"` |  |
 | etherpadlite.volumeMounts[0].name | string | `"api-key"` |  |
@@ -331,6 +354,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | moodlecronjob.jobs[0].schedule | string | `"* * * * *"` |  |
 | moodlecronjob.jobs[0].successfulJobsHistoryLimit | int | `1` |  |
 | moodlecronjob.podSecurityContext.fsGroup | int | `1001` |  |
+| moodlecronjob.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | moodlecronjob.resources | object | `{}` |  |
 | moodlecronjob.securityContext.allowPrivilegeEscalation | bool | `false` |  |
 | moodlecronjob.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
@@ -353,8 +377,17 @@ The Chart can be deployed without any modification but it is advised to set own 
 | postgresql.metrics.image.repository | string | `"bitnamilegacy/postgres-exporter"` |  |
 | postgresql.metrics.serviceMonitor.enabled | bool | `true` |  |
 | postgresql.primary.affinity | object | `{}` |  |
+| postgresql.primary.containerSecurityContext.allowPrivilegeEscalation | bool | `false` |  |
+| postgresql.primary.containerSecurityContext.capabilities.drop[0] | string | `"ALL"` |  |
+| postgresql.primary.containerSecurityContext.enabled | bool | `true` |  |
 | postgresql.primary.containerSecurityContext.privileged | bool | `false` |  |
+| postgresql.primary.containerSecurityContext.runAsGroup | int | `1001` |  |
+| postgresql.primary.containerSecurityContext.runAsNonRoot | bool | `true` |  |
+| postgresql.primary.containerSecurityContext.runAsUser | int | `1001` |  |
 | postgresql.primary.extendedConfiguration | string | `"max_connections = 800\n"` |  |
+| postgresql.primary.podSecurityContext.enabled | bool | `true` |  |
+| postgresql.primary.podSecurityContext.fsGroup | int | `1001` |  |
+| postgresql.primary.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | postgresql.primary.resources.limits.cpu | int | `9` |  |
 | postgresql.primary.resources.limits.memory | string | `"3Gi"` |  |
 | postgresql.primary.resources.requests.cpu | string | `"250m"` |  |
@@ -388,9 +421,15 @@ The Chart can be deployed without any modification but it is advised to set own 
 | sql-exporter.extraVolumes[0].volume.configMap.items[0].path | string | `"sql_exporter_moodle.yaml"` |  |
 | sql-exporter.extraVolumes[0].volume.configMap.name | string | `"moodle-sql-exporter-configmap"` |  |
 | sql-exporter.image.pullPolicy | string | `"IfNotPresent"` |  |
+| sql-exporter.podSecurityContext.fsGroup | int | `1001` |  |
+| sql-exporter.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
 | sql-exporter.resources | object | `{}` |  |
 | sql-exporter.securityContext.allowPrivilegeEscalation | bool | `false` |  |
+| sql-exporter.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | sql-exporter.securityContext.privileged | bool | `false` |  |
+| sql-exporter.securityContext.runAsGroup | int | `1001` |  |
+| sql-exporter.securityContext.runAsNonRoot | bool | `true` |  |
+| sql-exporter.securityContext.runAsUser | int | `1001` |  |
 | sql-exporter.tolerations | list | `[]` |  |
 
 ----------------------------------------------
