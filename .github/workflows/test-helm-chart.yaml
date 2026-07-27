@@ -120,7 +120,7 @@ jobs:
       # Severity MEDIUM/LOW    → wird in SARIF gemeldet, bricht Build nicht ab.
       # Akzeptierte Ausnahmen sind in .trivyignore.yaml dokumentiert.
       - name: Trivy config scan (HIGH/CRITICAL → Fehler)
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: "config"
           scan-ref: "charts/dbp-moodle/"
@@ -132,7 +132,7 @@ jobs:
 
       # Zweiter Lauf: alle Severities → SARIF für GitHub Security-Tab
       - name: Trivy config scan (alle Severities → SARIF)
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         if: always()
         with:
           scan-type: "config"
