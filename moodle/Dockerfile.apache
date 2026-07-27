@@ -31,8 +31,7 @@ RUN apt-get update && \
     ./apache2-bin_${APACHE_VERSION}_amd64.deb \
     ./apache2-data_${APACHE_VERSION}_all.deb \
     ./apache2-utils_${APACHE_VERSION}_amd64.deb \
-    ./apache2_${APACHE_VERSION}_amd64.deb \
-    libapache2-mod-fcgid && \
+    ./apache2_${APACHE_VERSION}_amd64.deb && \
     rm -f *.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
