@@ -27,6 +27,7 @@ jobs:
       context: "./moodle/"
 
   release_helm:
+    if: github.repository_owner == 'dBildungsplattform'
     uses: dBildungsplattform/dbp-github-workflows/.github/workflows/chart-release.yaml@7
     secrets: inherit
     with:
