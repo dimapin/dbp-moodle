@@ -129,13 +129,11 @@ jobs:
             --timeout=60s || \
           kubectl get pvc -n "$NAMESPACE"
 
-      - name: RBAC-Ressourcen existieren
+      - name: RBAC-Ressourcen für aktive CI-Komponenten existieren
         run: |
           kubectl get role          -n "$NAMESPACE" moodle-cronjob
           kubectl get serviceaccount -n "$NAMESPACE" moodle-cronjob
           kubectl get rolebinding   -n "$NAMESPACE" moodle-cronjob
-          kubectl get role          -n "$NAMESPACE" moodle-restore-job
-          kubectl get serviceaccount -n "$NAMESPACE" moodle-restore-job
 
       - name: Moodle-Config-Secret (config.php) existiert
         run: kubectl get secret -n "$NAMESPACE" moodle-config-secret
