@@ -35,6 +35,11 @@ RUN apt-get update && \
     rm -f *.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Set the Apache run user/group to match the container user (UID 1001) so that
+# apache2ctl can chown its control socket files without requiring root privileges.
+RUN sed -i 's/^export APACHE_RUN_USER=.*/export APACHE_RUN_USER=moodle/' /etc/apache2/envvars && \
+    sed -i 's/^export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=moodle/' /etc/apache2/envvars
+
 COPY scripts/init/apache/httpd.conf /etc/apache2/apache2.conf
 
 RUN /scripts/install/apacheInstall.sh
