@@ -150,7 +150,7 @@ unoconv:fileconverter_unoconv:fileconverter/unoconv:                {{- "true" }
 
 {{- define "dbpMoodle.backup.gpg_key_names.cmd" -}}
 {{- $keys := list -}}
-{{- range $key := splitList "," ((.Values.dbpMoodle.backup.gpg_key_names | default "") | toString) -}}
+{{- range $key := splitList "," (.Values.dbpMoodle.backup.gpg_key_names | default "" | toString) -}}
 {{- $trimmedKey := trim $key -}}
 {{- if $trimmedKey -}}
 {{- $keys = append $keys $trimmedKey -}}
