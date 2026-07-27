@@ -1,6 +1,6 @@
 # dbp-moodle
 
-![Version: 1.1.2](https://img.shields.io/badge/Version-1.1.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.5.10](https://img.shields.io/badge/AppVersion-4.5.10-informational?style=flat-square)
+![Version: 1.6.2](https://img.shields.io/badge/Version-1.6.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 4.5.12](https://img.shields.io/badge/AppVersion-4.5.12-informational?style=flat-square)
 
 This is a Helm Chart bundling some of the bitnami resources to deploy Moodle for DBildungsplattform. Extending them with features such as
 PostgreSQL support, Horizontal Autoscaling capabilities, Redis Session Store, Etherpad-Lite.
@@ -15,7 +15,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | file://charts/cronjob | cronjob | 0.1.0 |
 | file://charts/cronjob | cronjob | 0.1.0 |
 | file://charts/etherpad | etherpad | 0.1.0 |
-| file://charts/moodle | moodle | 27.0.4 |
+| file://charts/moodle | moodle | 27.0.5 |
 | https://burningalchemist.github.io/sql_exporter/ | sql-exporter | 0.6.1 |
 | https://charts.bitnami.com/bitnami | postgresql | 15.5.38 |
 | https://charts.bitnami.com/bitnami | postgresql | 15.5.38 |
@@ -31,6 +31,15 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.env[0].name | string | `"DATABASE_HOST"` |  |
 | backup-cronjob.env[0].valueFrom.secretKeyRef.key | string | `"host"` |  |
 | backup-cronjob.env[0].valueFrom.secretKeyRef.name | string | `"moodle-database"` |  |
+| backup-cronjob.env[10].name | string | `"AWS_ACCESS_KEY_ID"` |  |
+| backup-cronjob.env[10].valueFrom.secretKeyRef.key | string | `"s3_access_key"` |  |
+| backup-cronjob.env[10].valueFrom.secretKeyRef.name | string | `"moodle-backup-s3"` |  |
+| backup-cronjob.env[11].name | string | `"AWS_SECRET_ACCESS_KEY"` |  |
+| backup-cronjob.env[11].valueFrom.secretKeyRef.key | string | `"s3_access_secret"` |  |
+| backup-cronjob.env[11].valueFrom.secretKeyRef.name | string | `"moodle-backup-s3"` |  |
+| backup-cronjob.env[12].name | string | `"S3_BACKUP_REGION_URL"` |  |
+| backup-cronjob.env[12].valueFrom.secretKeyRef.key | string | `"s3_endpoint_url"` |  |
+| backup-cronjob.env[12].valueFrom.secretKeyRef.name | string | `"moodle-backup-s3"` |  |
 | backup-cronjob.env[1].name | string | `"DATABASE_PORT"` |  |
 | backup-cronjob.env[1].valueFrom.secretKeyRef.key | string | `"port"` |  |
 | backup-cronjob.env[1].valueFrom.secretKeyRef.name | string | `"moodle-database"` |  |
@@ -43,15 +52,21 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.env[4].name | string | `"DATABASE_PASSWORD"` |  |
 | backup-cronjob.env[4].valueFrom.secretKeyRef.key | string | `"db-password"` |  |
 | backup-cronjob.env[4].valueFrom.secretKeyRef.name | string | `"moodle"` |  |
-| backup-cronjob.env[5].name | string | `"AWS_ACCESS_KEY_ID"` |  |
-| backup-cronjob.env[5].valueFrom.secretKeyRef.key | string | `"s3_access_key"` |  |
-| backup-cronjob.env[5].valueFrom.secretKeyRef.name | string | `"moodle-backup-s3"` |  |
-| backup-cronjob.env[6].name | string | `"AWS_SECRET_ACCESS_KEY"` |  |
-| backup-cronjob.env[6].valueFrom.secretKeyRef.key | string | `"s3_access_secret"` |  |
-| backup-cronjob.env[6].valueFrom.secretKeyRef.name | string | `"moodle-backup-s3"` |  |
-| backup-cronjob.env[7].name | string | `"S3_BACKUP_REGION_URL"` |  |
-| backup-cronjob.env[7].valueFrom.secretKeyRef.key | string | `"s3_endpoint_url"` |  |
-| backup-cronjob.env[7].valueFrom.secretKeyRef.name | string | `"moodle-backup-s3"` |  |
+| backup-cronjob.env[5].name | string | `"DATABASE_HOST_ETHERPAD"` |  |
+| backup-cronjob.env[5].valueFrom.secretKeyRef.key | string | `"host"` |  |
+| backup-cronjob.env[5].valueFrom.secretKeyRef.name | string | `"etherpad-database"` |  |
+| backup-cronjob.env[6].name | string | `"DATABASE_PORT_ETHERPAD"` |  |
+| backup-cronjob.env[6].valueFrom.secretKeyRef.key | string | `"port"` |  |
+| backup-cronjob.env[6].valueFrom.secretKeyRef.name | string | `"etherpad-database"` |  |
+| backup-cronjob.env[7].name | string | `"DATABASE_NAME_ETHERPAD"` |  |
+| backup-cronjob.env[7].valueFrom.secretKeyRef.key | string | `"name"` |  |
+| backup-cronjob.env[7].valueFrom.secretKeyRef.name | string | `"etherpad-database"` |  |
+| backup-cronjob.env[8].name | string | `"DATABASE_USER_ETHERPAD"` |  |
+| backup-cronjob.env[8].valueFrom.secretKeyRef.key | string | `"user"` |  |
+| backup-cronjob.env[8].valueFrom.secretKeyRef.name | string | `"etherpad-database"` |  |
+| backup-cronjob.env[9].name | string | `"DATABASE_PASSWORD_ETHERPAD"` |  |
+| backup-cronjob.env[9].valueFrom.secretKeyRef.key | string | `"etherpad-postgresql-password"` |  |
+| backup-cronjob.env[9].valueFrom.secretKeyRef.name | string | `"moodle"` |  |
 | backup-cronjob.extraVolumeMounts[0].mountPath | string | `"/scripts/"` |  |
 | backup-cronjob.extraVolumeMounts[0].name | string | `"moodle-backup-script"` |  |
 | backup-cronjob.extraVolumeMounts[1].mountPath | string | `"/mountData"` |  |
@@ -72,7 +87,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.extraVolumes[2].projected.sources[0].configMap.name | string | `"moodle-backup-duply"` |  |
 | backup-cronjob.extraVolumes[2].projected.sources[1].secret.name | string | `"moodle-backup-gpg-keys"` |  |
 | backup-cronjob.image.repository | string | `"ghcr.io/dbildungsplattform/moodle-tools"` |  |
-| backup-cronjob.image.tag | string | `"1.1.14"` |  |
+| backup-cronjob.image.tag | string | `"1.1.15"` |  |
 | backup-cronjob.jobs[0].args[0] | string | `"/scripts/backup-script"` |  |
 | backup-cronjob.jobs[0].command[0] | string | `"/bin/sh"` |  |
 | backup-cronjob.jobs[0].command[1] | string | `"-c"` |  |
@@ -123,7 +138,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | clamav.service.type | string | `"ClusterIP"` |  |
 | clamav.tolerations | list | `[]` |  |
 | dbpMoodle.allowInternalNetworkingOnly | bool | `false` | disallows all egress from release namespace for the moodle deployment |
-| dbpMoodle.backup | object | `{"cluster_name":"","enabled":false,"endpoint":"","gpg_key_names":"","gpgkeys":{"existingSecret":"","gpgkey.dbpinfra.pub.asc":"","gpgkey.dbpinfra.sec.asc":""},"max_full_backup_age":"1W","retention_time":"6M","rules":[{"apiGroups":["apps"],"resources":["deployments"],"verbs":["get","patch","list","watch"]},{"apiGroups":["batch"],"resources":["cronjobs","jobs"],"verbs":["get","patch"]}],"s3_bucket_name":"","s3_certificate_secret":{"enabled":false,"key":"certificate.crt","mountpath":"/certs","name":"s3-certificate"},"secrets":{"existingSecret":"","s3_access_key":"","s3_access_secret":"","s3_endpoint_url":""}}` | Backup configuration. Set enabled=true to enable the backup-cronjob. Also set s3 location credentials |
+| dbpMoodle.backup | object | `{"cluster_name":"","dump_kind":"full","enabled":false,"endpoint":"","gpg_key_names":"","gpgkeys":{"existingSecret":"","gpgkey.dbpinfra.pub.asc":"","gpgkey.dbpinfra.sec.asc":""},"max_full_backup_age":"1W","retention_time":"6M","rules":[{"apiGroups":["apps"],"resources":["deployments"],"verbs":["get","patch","list","watch"]},{"apiGroups":["batch"],"resources":["cronjobs","jobs"],"verbs":["get","patch"]}],"run_pre_upgrade":true,"s3_bucket_name":"","s3_certificate_secret":{"enabled":false,"key":"certificate.crt","mountpath":"/certs","name":"s3-certificate"},"secrets":{"existingSecret":"","s3_access_key":"","s3_access_secret":"","s3_endpoint_url":""}}` | Backup configuration. Set enabled=true to enable the backup-cronjob. Also set s3 location credentials |
 | dbpMoodle.backup.gpgkeys.existingSecret | string | `""` | Existing  secret for gpg keys |
 | dbpMoodle.backup.max_full_backup_age | string | `"1W"` | Defines the maximum age of a full backup before a new full backup is created. The backups in between are incremental |
 | dbpMoodle.backup.retention_time | string | `"6M"` | Defines the maximum age of a backup before it is deleted |
@@ -137,6 +152,27 @@ The Chart can be deployed without any modification but it is advised to set own 
 | dbpMoodle.external_pvc.name | string | `"moodle-data"` |  |
 | dbpMoodle.external_pvc.size | string | `"8Gi"` |  |
 | dbpMoodle.external_pvc.storage_class | string | `"nfs-client"` |  |
+| dbpMoodle.goemaxima.enabled | bool | `false` |  |
+| dbpMoodle.goemaxima.env.MAXIMA_TIMEOUT | string | `"30"` |  |
+| dbpMoodle.goemaxima.image.pullPolicy | string | `"IfNotPresent"` |  |
+| dbpMoodle.goemaxima.image.repository | string | `"ghcr.io/dbildungsplattform/goemaxima"` |  |
+| dbpMoodle.goemaxima.image.tag | string | `"latest"` |  |
+| dbpMoodle.goemaxima.podSecurityContext | object | `{}` |  |
+| dbpMoodle.goemaxima.replicaCount | int | `1` |  |
+| dbpMoodle.goemaxima.resources.limits.cpu | string | `"1"` |  |
+| dbpMoodle.goemaxima.resources.limits.memory | string | `"512Mi"` |  |
+| dbpMoodle.goemaxima.resources.requests.cpu | string | `"200m"` |  |
+| dbpMoodle.goemaxima.resources.requests.memory | string | `"256Mi"` |  |
+| dbpMoodle.goemaxima.securityContext.allowPrivilegeEscalation | bool | `false` |  |
+| dbpMoodle.goemaxima.securityContext.readOnlyRootFilesystem | bool | `true` |  |
+| dbpMoodle.goemaxima.securityContext.runAsNonRoot | bool | `true` |  |
+| dbpMoodle.goemaxima.securityContext.runAsUser | int | `1000` |  |
+| dbpMoodle.goemaxima.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
+| dbpMoodle.goemaxima.service.annotations | object | `{}` |  |
+| dbpMoodle.goemaxima.service.labels | object | `{}` |  |
+| dbpMoodle.goemaxima.service.port | int | `8080` |  |
+| dbpMoodle.goemaxima.service.targetPort | int | `8080` |  |
+| dbpMoodle.goemaxima.service.type | string | `"ClusterIP"` |  |
 | dbpMoodle.hpa | object | `{"average_cpu_utilization":50,"deployment_name_ref":"moodle","enabled":false,"max_replicas":4,"min_replicas":1,"scaledown_cooldown":60,"scaledown_value":25,"scaleup_cooldown":15,"scaleup_value":50}` | Horizontal pod autoscaling values |
 | dbpMoodle.hpa.scaledown_cooldown | int | `60` | How many seconds to wait between downscaling adjustments |
 | dbpMoodle.hpa.scaledown_value | int | `25` | The max amount in percent to scale down in one step per cooldown period |
@@ -154,7 +190,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[2] | string | `"create"` |  |
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[3] | string | `"patch"` |  |
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[4] | string | `"watch"` |  |
-| dbpMoodle.moodleUpdatePreparationJob | object | `{"affinity":{},"enabled":false,"image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"repository":"ghcr.io/dbildungsplattform","resources":{"limits":{"cpu":"1000m","memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.14","tolerations":[]}` | A preperation job which disables the php-cronjob, scales down the deployment and creates a backup if dbpMoodle.backup.enabled=true |
+| dbpMoodle.moodleUpdatePreparationJob | object | `{"affinity":{},"enabled":false,"image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"repository":"ghcr.io/dbildungsplattform","resources":{"limits":{"cpu":"1000m","memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.15","tolerations":[]}` | A preperation job which disables the php-cronjob, scales down the deployment and creates a backup if dbpMoodle.backup.enabled=true |
 | dbpMoodle.moodleUpdatePreparationJob.repository | string | `"ghcr.io/dbildungsplattform"` | Which kubectl image to use |
 | dbpMoodle.moodlecronjob | object | `{"rules":[{"apiGroups":[""],"resources":["pods","pods/exec"],"verbs":["get","list","create","watch"]}],"wait_timeout":"15m"}` | Configuration for the moodle-cronjob which runs moodles cron.php. This is required since moodle does not run as root |
 | dbpMoodle.name | string | `"infra"` |  |
@@ -170,7 +206,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | dbpMoodle.phpConfig.ip.blocked | string | `""` |  |
 | dbpMoodle.phpConfig.pluginUIInstallation | object | `{"enabled":false}` | Prevents the installation of Plugins from the Moodle Web Interface for Admins (Disabled by default) |
 | dbpMoodle.redis | object | `{"host":"moodle-redis-master","port":6379}` | Configurations for the optional redis |
-| dbpMoodle.restore | object | `{"affinity":{},"enabled":false,"existingSecretDatabaseConfig":"moodle-database","existingSecretDatabasePassword":"moodle","existingSecretGPG":"","existingSecretKeyDatabasePassword":"","existingSecretKeyS3Access":"","existingSecretKeyS3Secret":"","existingSecretS3":"","image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"repository":"ghcr.io/dbildungsplattform","resources":{"limits":{"cpu":"2000m","memory":"4Gi"},"requests":{"cpu":"1000m","memory":"2Gi"}},"restoreDate":"","rules":[{"apiGroups":["apps"],"resources":["deployments/scale","deployments"],"verbs":["get","list","patch"]}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.14","tolerations":[]}` | This restores moodle to the latest snapshot. Requires an existing s3 backup. ONLY USE FOR ROLLBACK |
+| dbpMoodle.restore | object | `{"affinity":{},"dump_kind":"full","enabled":false,"existingSecretDatabaseConfig":"moodle-database","existingSecretDatabasePassword":"moodle","existingSecretGPG":"","existingSecretKeyDatabasePassword":"","existingSecretKeyS3Access":"","existingSecretKeyS3Secret":"","existingSecretS3":"","image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"replace_db_user_during_restore":false,"repository":"ghcr.io/dbildungsplattform","resources":{"limits":{"cpu":"2000m","memory":"4Gi"},"requests":{"cpu":"1000m","memory":"2Gi"}},"restoreDate":"","rules":[{"apiGroups":["apps"],"resources":["deployments/scale","deployments"],"verbs":["get","list","patch"]}],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.15","tolerations":[]}` | This restores moodle to the latest snapshot. Requires an existing s3 backup. ONLY USE FOR ROLLBACK |
 | dbpMoodle.secrets | object | `{"database_admin_password":"","database_name":"","database_password":"","database_root_password":"","database_user":"","etherpad_api_key":"","etherpad_postgresql_password":"","moodle_password":"","moodle_user":"","redis_password":"","useChartSecret":true}` | Creates a secret with all relevant credentials for moodle -- Set useChartSecret: false to provide your own secret -- If you create your own secret, also set moodle.existingSecret (and moodle.externalDatabase.existingSecret if you bring your own DB) |
 | dbpMoodle.stage | string | `"infra"` |  |
 | dbpMoodle.uninstallSystemPlugins | bool | `false` |  |
@@ -218,6 +254,15 @@ The Chart can be deployed without any modification but it is advised to set own 
 | etherpadlite.env[5].valueFrom.secretKeyRef.name | string | `"moodle"` |  |
 | etherpadlite.env[6].name | string | `"REQUIRE_SESSION"` |  |
 | etherpadlite.env[6].value | string | `"true"` |  |
+| etherpadlite.externalDatabase.database | string | `"etherpad"` | Name of the existing database |
+| etherpadlite.externalDatabase.existingSecret | string | `"moodle"` | Name of an existing secret resource containing the DB password |
+| etherpadlite.externalDatabase.existingSecretKey | string | `"etherpad-postgresql-password"` | Name of the key holding the DB password in the existing Secret |
+| etherpadlite.externalDatabase.host | string | `"moodle-etherpad-postgresql"` | Host of the existing database |
+| etherpadlite.externalDatabase.password | string | `""` | Password for the above username |
+| etherpadlite.externalDatabase.port | int | `5432` | Port of the existing database |
+| etherpadlite.externalDatabase.ssl | bool | `false` | Use ssl to communicate with the database |
+| etherpadlite.externalDatabase.type | string | `"postgres"` | Type of DB to provision, possible values are "postgres" |
+| etherpadlite.externalDatabase.user | string | `"etherpad"` | Existing username in the external db |
 | etherpadlite.image.repository | string | `"ghcr.io/dbildungsplattform/etherpad"` |  |
 | etherpadlite.image.tag | string | `"2.6.1.0"` |  |
 | etherpadlite.ingress.annotations."cert-manager.io/cluster-issuer" | string | `"sc-cert-manager-clusterissuer-letsencrypt"` |  |
@@ -243,17 +288,21 @@ The Chart can be deployed without any modification but it is advised to set own 
 | etherpadlite.volumeMounts[0].mountPath | string | `"/opt/etherpad-lite/APIKEY.txt"` |  |
 | etherpadlite.volumeMounts[0].name | string | `"api-key"` |  |
 | etherpadlite.volumeMounts[0].subPath | string | `"APIKEY.txt"` |  |
+| etherpadlite.volumeMounts[1].mountPath | string | `"/opt/etherpad-lite/settings.json"` |  |
+| etherpadlite.volumeMounts[1].name | string | `"etherpad-settings"` |  |
+| etherpadlite.volumeMounts[1].subPath | string | `"settings"` |  |
 | etherpadlite.volumes[0].name | string | `"api-key"` |  |
 | etherpadlite.volumes[0].secret.items[0].key | string | `"etherpad-api-key"` |  |
 | etherpadlite.volumes[0].secret.items[0].path | string | `"APIKEY.txt"` |  |
 | etherpadlite.volumes[0].secret.secretName | string | `"moodle"` |  |
+| etherpadlite.volumes[1].configMap.name | string | `"etherpad-settings"` |  |
+| etherpadlite.volumes[1].name | string | `"etherpad-settings"` |  |
 | global.kubectl_version | string | `"1.28.7"` |  |
-| global.moodlePlugins | object | `{"adaptable":{"enabled":false},"availability_cohort":{"enabled":false},"block_stash":{"enabled":false},"board":{"enabled":false},"booking":{"enabled":false},"boost_magnific":{"enabled":false},"boost_union":{"enabled":false},"certificate":{"enabled":false},"choicegroup":{"enabled":false},"completion_progress":{"enabled":false},"coursearchiver":{"enabled":false},"coursecertificate":{"enabled":false},"customfield_dynamic":{"enabled":false},"dash":{"enabled":false},"dynamic_cohorts":{"enabled":false},"etherpadlite":{"enabled":false},"filtercodes":{"enabled":false},"flexsections":{"enabled":false},"geogebra":{"enabled":false},"groupselect":{"enabled":false},"heartbeat":{"enabled":false},"hvp":{"enabled":false},"jitsi":{"enabled":false},"mod_checklist":{"enabled":false},"mod_subcourse":{"enabled":false},"mod_videotime":{"enabled":false},"multitopic":{"enabled":false},"oidc":{"enabled":false},"pdfannotator":{"enabled":false},"qtype_stack":{"enabled":false},"reengagement":{"enabled":false},"remuiformat":{"enabled":false},"saml2":{"enabled":false},"sharing_cart":{"enabled":false},"shortcodes":{"enabled":false},"skype":{"enabled":false},"snap":{"enabled":false},"staticpage":{"enabled":false},"tiles":{"enabled":false},"topcoll":{"enabled":false},"unilabel":{"enabled":false},"usersuspension":{"enabled":false},"xp":{"enabled":false},"zoom":{"enabled":false}}` | All plugins are disabled by default. if enabled, the plugin is installed on image startup |
+| global.moodlePlugins | object | `{"adaptable":{"enabled":false},"availability_cohort":{"enabled":false},"block_stash":{"enabled":false},"board":{"enabled":false},"booking":{"enabled":false},"boost_magnific":{"enabled":false},"boost_union":{"enabled":false},"certificate":{"enabled":false},"choicegroup":{"enabled":false},"completion_progress":{"enabled":false},"coursearchiver":{"enabled":false},"coursecertificate":{"enabled":false},"customfield_dynamic":{"enabled":false},"dash":{"enabled":false},"dynamic_cohorts":{"enabled":false},"eledia_oidc":{"enabled":false},"etherpadlite":{"enabled":false},"filtercodes":{"enabled":false},"flexsections":{"enabled":false},"geogebra":{"enabled":false},"groupselect":{"enabled":false},"heartbeat":{"enabled":false},"hvp":{"enabled":false},"jitsi":{"enabled":false},"mod_checklist":{"enabled":false},"mod_subcourse":{"enabled":false},"mod_videotime":{"enabled":false},"multitopic":{"enabled":false},"oidc":{"enabled":false},"pdfannotator":{"enabled":false},"qtype_stack":{"enabled":false},"reengagement":{"enabled":false},"remuiformat":{"enabled":false},"saml2":{"enabled":false},"sharing_cart":{"enabled":false},"shortcodes":{"enabled":false},"skype":{"enabled":false},"snap":{"enabled":false},"staticpage":{"enabled":false},"tiles":{"enabled":false},"tool_mediatime":{"enabled":false},"topcoll":{"enabled":false},"unilabel":{"enabled":false},"usersuspension":{"enabled":false},"xp":{"enabled":false},"zoom":{"enabled":false}}` | All plugins are disabled by default. if enabled, the plugin is installed on image startup |
 | global.security.allowInsecureImages | bool | `true` |  |
 | global.storageClass | string | `"nfs-client"` | Default storage class, should support ReadWriteMany |
 | moodle.affinity | object | `{}` |  |
 | moodle.allowEmptyPassword | bool | `false` |  |
-| moodle.certificates.image.repository | string | `"bitnamilegacy/os-shell"` |  |
 | moodle.containerPorts.http | int | `8080` |  |
 | moodle.containerPorts.https | int | `8443` |  |
 | moodle.containerSecurityContext.enabled | bool | `true` |  |
@@ -293,7 +342,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | moodle.image.pullPolicy | string | `"Always"` |  |
 | moodle.image.registry | string | `"ghcr.io"` |  |
 | moodle.image.repository | string | `"dbildungsplattform/moodle"` |  |
-| moodle.image.tag | string | `"4.5.10-fpm-bookworm-8.2.30-dbp1"` | The dbp-moodle image which is build for this helm chart |
+| moodle.image.tag | string | `"4.5.12-fpm-trixie-8.2.31-dbp2"` | The dbp-moodle image which is build for this helm chart |
 | moodle.ingress.annotations."cert-manager.io/cluster-issuer" | string | `"sc-cert-manager-clusterissuer-letsencrypt"` |  |
 | moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-body-size" | string | `"201M"` |  |
 | moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-connect-timeout" | string | `"30s"` |  |
@@ -326,14 +375,14 @@ The Chart can be deployed without any modification but it is advised to set own 
 | moodle.resources.requests.cpu | string | `"300m"` |  |
 | moodle.resources.requests.memory | string | `"512Mi"` |  |
 | moodle.service.type | string | `"ClusterIP"` |  |
+| moodle.startupProbe.enabled | bool | `true` |  |
+| moodle.startupProbe.failureThreshold | int | `120` |  |
 | moodle.tolerations | list | `[]` |  |
 | moodle.updateStrategy.type | string | `"RollingUpdate"` |  |
-| moodle.usePasswordFiles | bool | `false` |  |
-| moodle.volumePermissions.image.repository | string | `"bitnamilegacy/os-shell"` |  |
 | moodlecronjob.affinity | object | `{}` |  |
 | moodlecronjob.clusterRole.create | bool | `false` |  |
 | moodlecronjob.image.repository | string | `"ghcr.io/dbildungsplattform/moodle-tools"` |  |
-| moodlecronjob.image.tag | string | `"1.1.14"` |  |
+| moodlecronjob.image.tag | string | `"1.1.15"` |  |
 | moodlecronjob.jobs[0].args[0] | string | `"/scripts/cronjob-script"` |  |
 | moodlecronjob.jobs[0].backoffLimit | int | `1` |  |
 | moodlecronjob.jobs[0].command[0] | string | `"/bin/bash"` |  |
