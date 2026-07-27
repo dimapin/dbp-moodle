@@ -1,3 +1,4 @@
+{{- if gt (len .Values.moodlecronjob.jobs) 0 }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,3 +7,4 @@ metadata:
 data:
   cronjob-script: |-
 {{ tpl ( .Files.Get "scripts/cronjob.sh" ) . | nindent 4 }}
+{{- end }}
