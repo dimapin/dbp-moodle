@@ -84,7 +84,7 @@ jobs:
       - name: Run BSI helm unit tests
         run: |
           helm unittest \
-            --with-subcharts \
+            --with-subchart \
             --file 'tests/bsi-*.yaml' \
             charts/dbp-moodle/
 
