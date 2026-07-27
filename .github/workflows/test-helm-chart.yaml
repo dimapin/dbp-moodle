@@ -124,7 +124,6 @@ jobs:
         with:
           scan-type: "config"
           scan-ref: "charts/dbp-moodle/"
-          helm-values: "charts/dbp-moodle/values.yaml"
           severity: "CRITICAL,HIGH"
           exit-code: "1"
           trivyignores: ".trivyignore.yaml"
@@ -137,7 +136,6 @@ jobs:
         with:
           scan-type: "config"
           scan-ref: "charts/dbp-moodle/"
-          helm-values: "charts/dbp-moodle/values.yaml"
           severity: "CRITICAL,HIGH,MEDIUM"
           exit-code: "0"
           trivyignores: ".trivyignore.yaml"
