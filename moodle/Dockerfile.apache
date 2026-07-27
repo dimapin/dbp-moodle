@@ -47,8 +47,9 @@ RUN apt-get remove -y curl && \
     apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN chmod -R g+w /etc/apache2/ && \
-    chown -R 1001:1001 /etc/apache2 /var/log/apache2 /opt/dbp-moodle /dbp-moodle && \
+RUN mkdir -p /var/run/apache2 && \
+    chmod -R g+w /etc/apache2/ && \
+    chown -R 1001:1001 /etc/apache2 /var/log/apache2 /var/run/apache2 /opt/dbp-moodle /dbp-moodle && \
     chown -R 1001:root /scripts
 
 EXPOSE 8080 8443
