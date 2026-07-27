@@ -137,7 +137,7 @@ dbpMoodle:
     additionalPhpIni: |
       memory_limit = 513M
       upload_max_filesize = 201M
-      post_max_size = 150M
+      post_max_size = 201M
 
   # -- Configurations for the optional redis
   redis:
@@ -174,7 +174,13 @@ dbpMoodle:
     enabled: false
     affinity: {}
     tolerations: []
-    resources: {}
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
     podSecurityContext:
       fsGroup: 1001
       seccompProfile:
@@ -389,7 +395,7 @@ moodle:
       cert-manager.io/cluster-issuer: sc-cert-manager-clusterissuer-letsencrypt
       nginx.ingress.kubernetes.io/proxy-connect-timeout: "30s"
       nginx.ingress.kubernetes.io/proxy-read-timeout: "20s"
-      nginx.ingress.kubernetes.io/proxy-body-size: "200M"
+      nginx.ingress.kubernetes.io/proxy-body-size: "201M"
       nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
       nginx.ingress.kubernetes.io/whitelist-source-range: "0.0.0.0/0"
   # Switch to bitnamilegacy, see https://github.com/bitnami/charts/issues/35164
@@ -536,7 +542,13 @@ redis:
   master:
     affinity: {}
     tolerations: []
-    resources: {}
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
 
 etherpadlite:
   enabled: false
@@ -680,7 +692,13 @@ moodlecronjob:
         - ALL
   affinity: {}
   tolerations: []
-  resources: {}
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
   jobs:
     - name: php-script
       schedule: "* * * * *"
@@ -829,7 +847,7 @@ backup-cronjob:
         periodSeconds: 10
 
 clamav:
-  enabled: true
+  enabled: false
   image:
     tag: "1.5.1"
     pullPolicy: "IfNotPresent"
@@ -891,7 +909,13 @@ sql-exporter:
         - ALL
   affinity: {}
   tolerations: []
-  resources: {}
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
   extraVolumes:
     - name: moodle-collector-config
       volume:

@@ -1,4 +1,4 @@
-FROM docker.io/bitnami/minideb:bookworm
+FROM docker.io/bitnami/minideb:bookworm@sha256:78b29fc58bf04b48503db1f60ac724fd0bd211046534d11ac5496b9103bc241c
 
 ARG DEBIAN_FRONTEND=noninteractive
 

@@ -100,7 +100,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | backup-cronjob.serviceAccount.name | string | `"moodle-backup-job"` |  |
 | backup-cronjob.tolerations | list | `[]` |  |
 | clamav.affinity | object | `{}` |  |
-| clamav.enabled | bool | `true` |  |
+| clamav.enabled | bool | `false` |  |
 | clamav.freshclamConfig | string | `"Bytecode yes\nDatabaseDirectory /data\nDatabaseMirror database.clamav.net\nDatabaseOwner 1001\nLogTime yes\nNotifyClamd /etc/clamav/clamd.conf\nPidFile /tmp/freshclam.pid\nScriptedUpdates yes\n"` |  |
 | clamav.hpa.enabled | bool | `false` |  |
 | clamav.image.pullPolicy | string | `"IfNotPresent"` |  |
@@ -154,7 +154,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[2] | string | `"create"` |  |
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[3] | string | `"patch"` |  |
 | dbpMoodle.moodleUpdatePreparationHook.rules[1].verbs[4] | string | `"watch"` |  |
-| dbpMoodle.moodleUpdatePreparationJob | object | `{"affinity":{},"enabled":false,"image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"repository":"ghcr.io/dbildungsplattform","resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.14","tolerations":[]}` | A preperation job which disables the php-cronjob, scales down the deployment and creates a backup if dbpMoodle.backup.enabled=true |
+| dbpMoodle.moodleUpdatePreparationJob | object | `{"affinity":{},"enabled":false,"image":"moodle-tools","podSecurityContext":{"fsGroup":1001,"seccompProfile":{"type":"RuntimeDefault"}},"repository":"ghcr.io/dbildungsplattform","resources":{"limits":{"cpu":"1000m","memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1001,"runAsNonRoot":true,"runAsUser":1001},"tag":"1.1.14","tolerations":[]}` | A preperation job which disables the php-cronjob, scales down the deployment and creates a backup if dbpMoodle.backup.enabled=true |
 | dbpMoodle.moodleUpdatePreparationJob.repository | string | `"ghcr.io/dbildungsplattform"` | Which kubectl image to use |
 | dbpMoodle.moodlecronjob | object | `{"rules":[{"apiGroups":[""],"resources":["pods","pods/exec"],"verbs":["get","list","create","watch"]}],"wait_timeout":"15m"}` | Configuration for the moodle-cronjob which runs moodles cron.php. This is required since moodle does not run as root |
 | dbpMoodle.name | string | `"infra"` |  |
@@ -162,7 +162,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | dbpMoodle.networkPolicies.ingressNamespaceLabels | object | `{}` | Namespace labels of the ingress controller (e.g. {kubernetes.io/metadata.name: ingress-nginx}). -- Required for the etherpad ingress to keep working when enabled. |
 | dbpMoodle.networkPolicies.monitoringNamespaceLabels | object | `{}` | Namespace labels of the monitoring stack (e.g. {kubernetes.io/metadata.name: monitoring}). -- Required for cross-namespace scraping of metrics endpoints when enabled, otherwise scraping is blocked. |
 | dbpMoodle.phpConfig.additional | string | `""` | Any additional text to be included into the config.php |
-| dbpMoodle.phpConfig.additionalPhpIni | string | `"memory_limit = 513M\nupload_max_filesize = 201M\npost_max_size = 150M\n"` | A string filled with additional php.ini configuration that overwrites the default one |
+| dbpMoodle.phpConfig.additionalPhpIni | string | `"memory_limit = 513M\nupload_max_filesize = 201M\npost_max_size = 201M\n"` | A string filled with additional php.ini configuration that overwrites the default one |
 | dbpMoodle.phpConfig.debug | bool | `false` | Moodle debugging is not safe for production |
 | dbpMoodle.phpConfig.existingConfig | string | `""` | Provide an existing secret containing the config.php instead of generating it from chart -- Remember to adjust moodle.extraVolumes & moodle.extraVolumeMounts when setting this. -- Secret key is by default expected to be config.php |
 | dbpMoodle.phpConfig.extendedLogging | bool | `false` | Extended php logging |
@@ -295,7 +295,7 @@ The Chart can be deployed without any modification but it is advised to set own 
 | moodle.image.repository | string | `"dbildungsplattform/moodle"` |  |
 | moodle.image.tag | string | `"4.5.10-fpm-bookworm-8.2.30-dbp1"` | The dbp-moodle image which is build for this helm chart |
 | moodle.ingress.annotations."cert-manager.io/cluster-issuer" | string | `"sc-cert-manager-clusterissuer-letsencrypt"` |  |
-| moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-body-size" | string | `"200M"` |  |
+| moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-body-size" | string | `"201M"` |  |
 | moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-connect-timeout" | string | `"30s"` |  |
 | moodle.ingress.annotations."nginx.ingress.kubernetes.io/proxy-read-timeout" | string | `"20s"` |  |
 | moodle.ingress.annotations."nginx.ingress.kubernetes.io/use-forwarded-headers" | string | `"true"` |  |
@@ -355,7 +355,10 @@ The Chart can be deployed without any modification but it is advised to set own 
 | moodlecronjob.jobs[0].successfulJobsHistoryLimit | int | `1` |  |
 | moodlecronjob.podSecurityContext.fsGroup | int | `1001` |  |
 | moodlecronjob.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| moodlecronjob.resources | object | `{}` |  |
+| moodlecronjob.resources.limits.cpu | string | `"500m"` |  |
+| moodlecronjob.resources.limits.memory | string | `"512Mi"` |  |
+| moodlecronjob.resources.requests.cpu | string | `"50m"` |  |
+| moodlecronjob.resources.requests.memory | string | `"128Mi"` |  |
 | moodlecronjob.securityContext.allowPrivilegeEscalation | bool | `false` |  |
 | moodlecronjob.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | moodlecronjob.securityContext.privileged | bool | `false` |  |
@@ -403,7 +406,10 @@ The Chart can be deployed without any modification but it is advised to set own 
 | redis.image.repository | string | `"bitnamilegacy/redis"` |  |
 | redis.kubectl.image.repository | string | `"bitnamilegacy/kubectl"` |  |
 | redis.master.affinity | object | `{}` |  |
-| redis.master.resources | object | `{}` |  |
+| redis.master.resources.limits.cpu | string | `"500m"` |  |
+| redis.master.resources.limits.memory | string | `"1Gi"` |  |
+| redis.master.resources.requests.cpu | string | `"100m"` |  |
+| redis.master.resources.requests.memory | string | `"256Mi"` |  |
 | redis.master.tolerations | list | `[]` |  |
 | redis.metrics.image.repository | string | `"bitnamilegacy/redis-exporter"` |  |
 | redis.sentinel.image.repository | string | `"bitnamilegacy/redis-sentinel"` |  |
@@ -423,7 +429,10 @@ The Chart can be deployed without any modification but it is advised to set own 
 | sql-exporter.image.pullPolicy | string | `"IfNotPresent"` |  |
 | sql-exporter.podSecurityContext.fsGroup | int | `1001` |  |
 | sql-exporter.podSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| sql-exporter.resources | object | `{}` |  |
+| sql-exporter.resources.limits.cpu | string | `"200m"` |  |
+| sql-exporter.resources.limits.memory | string | `"256Mi"` |  |
+| sql-exporter.resources.requests.cpu | string | `"25m"` |  |
+| sql-exporter.resources.requests.memory | string | `"64Mi"` |  |
 | sql-exporter.securityContext.allowPrivilegeEscalation | bool | `false` |  |
 | sql-exporter.securityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | sql-exporter.securityContext.privileged | bool | `false` |  |

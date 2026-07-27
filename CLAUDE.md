@@ -4,8 +4,9 @@ Dieses Dokument gibt Claude Code den nötigen Kontext für die Arbeit in diesem 
 
 ## Projektübersicht
 
-**dbp-moodle** stellt Moodle LMS (v4.5.10, PHP 8.2) für die dBildungsplattform auf Kubernetes bereit.  
-Das Repo enthält drei Hauptkomponenten:
+**dbp-moodle** stellt Moodle LMS (v4.5.10, PHP 8.2.30-FPM) für die dBildungsplattform auf Kubernetes bereit.  
+Chart-Version 1.1.2 · Helm ≥ 3.16.3 · Kubernetes ≥ 1.25 · Lizenz Apache-2.0.  
+Das Repo enthält folgende Hauptkomponenten:
 
 | Komponente | Pfad | Zweck |
 |---|---|---|
@@ -14,7 +15,7 @@ Das Repo enthält drei Hauptkomponenten:
 | moodle-tools | `moodle-tools/Dockerfile` | Hilfsimage für CronJobs (Backup, Restore) |
 | Helm-Chart | `charts/dbp-moodle/` | Kubernetes-Deployment (inkl. Subcharts) |
 
-Beide Moodle-Container teilen sich ein gemeinsames **ReadWriteMany**-Volume:
+Beide Moodle-Container teilen sich ein gemeinsames **ReadWriteMany**-Volume (StorageClass `nfs-client`, Standard 8 Gi):
 - `/dbp-moodle/moodle` — Moodle-Quellcode
 - `/dbp-moodle/moodledata` — Nutzerdaten, Sessions, Cache
 
@@ -96,7 +97,8 @@ helm-docs --chart-search-root charts/
 | `moodle/scripts/init/apache/entrypoint.sh` | Startup-Sequenz Apache-Container |
 | `moodle/scripts/init/updateCheck.sh` | Moodle-Versionscheck beim Start |
 | `moodle/scripts/init/pluginCheck.sh` | Plugin-Installations-/Update-Check |
-| `moodle/libraries/` | Gemeinsame Bash-Libraries (`libdbp.sh`, `libmoodle.sh`, ...) |
+| `moodle/scripts/libdbp.sh` | Projektspezifische Bash-Library |
+| `moodle/libraries/` | Gemeinsame Bash-Libraries (`libmoodle.sh`, `libphp.sh`, ...) |
 | `charts/dbp-moodle/values.yaml` | Alle Helm-Konfigurationswerte |
 | `charts/dbp-moodle/values.schema.json` | JSON-Schema zur Values-Validierung |
 | `charts/dbp-moodle/Chart.yaml` | Chart-Metadaten und Abhängigkeiten |
@@ -124,8 +126,9 @@ Post-Update: Datenbankmigration → hochskalieren → Cron aktivieren.
 - **Keine Capabilities:** `capabilities.drop: [ALL]` in allen Deployments
 - **Seccomp:** `RuntimeDefault` aktiviert
 - **NetworkPolicies:** müssen für alle neuen Services angelegt werden
-- **Trivy-Gate:** HIGH/CRITICAL bricht den Build ab — neue `.trivyignore.yaml`-Einträge brauchen eine BSI-konforme Begründung
-- **`readOnlyRootFilesystem`** ist für Moodle nicht umsetzbar (dokumentierte Ausnahme KSV014)
+- **Trivy-Gate:** HIGH/CRITICAL bricht den Build ab (MEDIUM/LOW als SARIF-Report) — neue `.trivyignore.yaml`-Einträge brauchen eine BSI-konforme Begründung
+- **`readOnlyRootFilesystem`** ist für Moodle nicht umsetzbar (dokumentierte Ausnahme KSV014/AVD-KSV-0014)
+- **UID/GID 1001 statt > 10000** ist dokumentierte Ausnahme (KSV020/KSV021)
 
 ## CI/CD-Pipeline
 
@@ -133,13 +136,16 @@ Alle Pipelines liegen in `.github/workflows/`. Relevante Trigger:
 
 | Ereignis | Pipeline | Ergebnis |
 |---|---|---|
-| Semver-Tag | `build-and-push-on-tag.yaml` | Image nach `ghcr.io/dbildungsplattform/moodle` |
-| Semver-Tag | `helm-chart-release-on-tag.yaml` | Helm-Chart veröffentlicht |
-| Push auf `main` | `helm-chart-release-on-push.yaml` | Helm-Chart veröffentlicht |
-| Änderung `moodle/` | `test-docker-images.yaml` | Container-Structure-Tests |
+| Tag `<semver>` | `build-and-push-on-tag.yaml` | Image nach `ghcr.io/dbildungsplattform/moodle` |
+| Tag `moodle-tools-<semver>` | `moodle-tools-bap-on-tag.yaml` | moodle-tools-Image nach GHCR |
+| Tag `dbp-moodle-<semver>` | `helm-chart-release-on-tag.yaml` | Helm-Chart veröffentlicht |
+| Push auf Branch ≠ `main` | `helm-chart-release-on-push.yaml` | Dev-Release des Helm-Charts |
+| Änderung `moodle/` oder `moodle-tools/` | `test-docker-images.yaml` | Container-Structure-Tests (v1.19.3) |
 | Änderung `charts/` | `test-helm-chart.yaml` | lint + unittest + trivy |
 | Änderung `charts/` | `test-helm-kind.yaml` | KinD-Integrationstest |
 | Pull Request | `generate-helm-docs-on-pr.yaml` | README.md auto-update |
+| Täglich 02:00 UTC | `trivy-cron.yaml` | Sicherheitsscan des gesamten Repos |
+| Stündlich / manuell | `sync-oidc-plugin-repo.yaml` | OIDC-Plugin-Sync |
 
 ## Konventionen
 

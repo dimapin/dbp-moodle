@@ -14,10 +14,10 @@ misconfigurations:
   #   - Moodle-Core schreibt in /opt/dbp-moodle/moodle/ (Plugin-Assets)
   #   - Das Moodledata-Verzeichnis wird als separates Volume eingebunden
   # Kompensierende Maßnahme:
-  #   - Container läuft als non-root (UID 1001, runAsNonRoot: true)
+  #   - Container läuft als non-root (UID/GID 1001, runAsNonRoot: true)
   #   - Alle Linux-Capabilities werden gedroppt (capabilities.drop: [ALL])
   #   - Seccomp-Profil RuntimeDefault ist aktiv (moodle-subchart)
-  #   - ClamAV scannt hochgeladene Dateien
+  #   - Optional: ClamAV scannt hochgeladene Dateien (clamav.enabled, per Default deaktiviert)
   - id: "AVD-KSV-0014"
     paths:
       - "charts/dbp-moodle"
