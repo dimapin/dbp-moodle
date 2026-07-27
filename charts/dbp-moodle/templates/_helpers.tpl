@@ -149,7 +149,13 @@ unoconv:fileconverter_unoconv:fileconverter/unoconv:                {{- "true" }
 {{- end -}}
 
 {{- define "dbpMoodle.backup.gpg_key_names.cmd" -}}
-{{- $keys := .Values.dbpMoodle.backup.gpg_key_names -}}
+{{- $keys := list -}}
+{{- range $key := splitList "," ((.Values.dbpMoodle.backup.gpg_key_names | default "") | toString) -}}
+{{- $trimmedKey := trim $key -}}
+{{- if $trimmedKey -}}
+{{- $keys = append $keys $trimmedKey -}}
+{{- end -}}
+{{- end -}}
 {{- range $index, $key := $keys -}}
 $(gpg --show-keys --with-colons /etc/duply/default/gpgkey.{{ $key }}.pub.asc | awk -F: '/^pub/ { print $5 }'){{- if lt (add1 $index) (len $keys) -}},{{- end -}}
 {{- end -}}
