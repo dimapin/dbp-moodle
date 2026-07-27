@@ -12,9 +12,7 @@ ARG WITH_ALL_LOCALES="no"
 WORKDIR /
 RUN mkdir /bitnami /dbp-moodle
 
-COPY scripts/install /scripts/install
-COPY scripts/init /scripts/init
-COPY scripts/libdbp.sh /scripts/libdbp.sh
+COPY scripts /scripts
 COPY libraries /scripts
 
 #Add user with ID 1001
