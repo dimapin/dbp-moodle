@@ -14,8 +14,8 @@
 {{- end -}}
 
 {{- define "moodlecronjob.job_name" -}}
-{{- with (index .Values.moodlecronjob.jobs 0) -}}
-{{- .name -}}
+{{- if gt (len .Values.moodlecronjob.jobs) 0 -}}
+{{- (index .Values.moodlecronjob.jobs 0).name -}}
 {{- end -}}
 {{- end -}}
 

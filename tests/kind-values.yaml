@@ -83,6 +83,9 @@ moodle:
 # ── PostgreSQL ───────────────────────────────────────────────────────────────
 postgresql:
   enabled: true
+  metrics:
+    serviceMonitor:
+      enabled: false  # Prometheus Operator CRDs sind im KinD-Cluster nicht installiert
   primary:
     resources:
       requests:
