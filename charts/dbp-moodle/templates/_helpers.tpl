@@ -75,6 +75,7 @@
 {{- end -}}
 
 {{- define "dbpMoodle.pluginConfigMap.content" -}}
+eledia_oidc:eledia_auth_oidc:auth/oidc:                         {{- .Values.global.moodlePlugins.eledia_oidc.enabled }}{{"\n"}}
 wunderbyte_table:local_wunderbyte_table:local/wunderbyte_table: {{- .Values.global.moodlePlugins.booking.enabled}}{{"\n"}}
 certificate:tool_certificate:admin/tool/certificate:            {{- or .Values.global.moodlePlugins.certificate.enabled .Values.global.moodlePlugins.coursecertificate.enabled }}{{"\n"}}
 etherpadlite:mod_etherpadlite:mod/etherpadlite:                 {{- .Values.global.moodlePlugins.etherpadlite.enabled }}{{"\n"}}
@@ -114,8 +115,8 @@ dynamic:customfield_dynamic:customfield/field/dynamic:          {{- .Values.glob
 cohort:availability_cohort:availability/condition/cohort:       {{- .Values.global.moodlePlugins.availability_cohort.enabled }}{{"\n"}}
 board:mod_board:mod/board:                                      {{- .Values.global.moodlePlugins.board.enabled }}{{"\n"}}
 adaptivemultipart:qbehaviour_adaptivemultipart:question/behaviour/adaptivemultipart: {{- .Values.global.moodlePlugins.qtype_stack.enabled }}{{"\n"}}
-dfexplicitvaildate:qbehaviour_dfexplicitvaildate:question/behaviour/qbehaviour_dfexplicitvaildate: {{- .Values.global.moodlePlugins.qtype_stack.enabled }}{{"\n"}}
-dfcbmexplicitvaildate:qbehaviour_dfcbmexplicitvaildate:question/behaviour/qbehaviour_dfcbmexplicitvaildate: {{- .Values.global.moodlePlugins.qtype_stack.enabled }}{{"\n"}}
+dfexplicitvaildate:qbehaviour_dfexplicitvaildate:question/behaviour/dfexplicitvaildate: {{- .Values.global.moodlePlugins.qtype_stack.enabled }}{{"\n"}}
+dfcbmexplicitvaildate:qbehaviour_dfcbmexplicitvaildate:question/behaviour/dfcbmexplicitvaildate: {{- .Values.global.moodlePlugins.qtype_stack.enabled }}{{"\n"}}
 stack:qtype_stack:question/type/stack:                          {{- .Values.global.moodlePlugins.qtype_stack.enabled }}{{"\n"}}
 checklist:mod_checklist:mod/checklist:                          {{- .Values.global.moodlePlugins.mod_checklist.enabled }}{{"\n"}}
 stash:block_stash:blocks/stash:                                 {{- .Values.global.moodlePlugins.block_stash.enabled }}{{"\n"}}
@@ -123,6 +124,7 @@ completion_progress:block_completion_progress:blocks/completion_progress: {{- .V
 coursearchiver:tool_coursearchiver:admin/tool/coursearchiver:   {{- .Values.global.moodlePlugins.coursearchiver.enabled }}{{"\n"}}
 subcourse:mod_subcourse:mod/subcourse:                          {{- .Values.global.moodlePlugins.mod_subcourse.enabled }}{{"\n"}}
 videotime:mod_videotime:mod/videotime:                          {{- .Values.global.moodlePlugins.mod_videotime.enabled }}{{"\n"}}
+mediatime:tool_mediatime:admin/tool/mediatime:                  {{- .Values.global.moodlePlugins.tool_mediatime.enabled }}{{"\n"}}
 {{- end -}}
 
 {{- define "dbpMoodle.pluginConfigMap.sys.uninstall.content" -}}
@@ -143,5 +145,12 @@ mahara:portfolio_mahara:portfolio/mahara:                           {{- "true" }
 smsgateway_aws:smsgateway_aws:smsgateway/aws:                       {{- "true" }}{{"\n"}}
 enrol_paypal:enrol_paypal:enrol/paypal:                             {{- "true" }}{{"\n"}}
 unoconv:fileconverter_unoconv:fileconverter/unoconv:                {{- "true" }}{{"\n"}}
+{{- end -}}
+{{- end -}}
+
+{{- define "dbpMoodle.backup.gpg_key_names.cmd" -}}
+{{- $keys := .Values.dbpMoodle.backup.gpg_key_names -}}
+{{- range $index, $key := $keys -}}
+$(gpg --show-keys --with-colons /etc/duply/default/gpgkey.{{ $key }}.pub.asc | awk -F: '/^pub/ { print $5 }'){{- if lt (add1 $index) (len $keys) -}},{{- end -}}
 {{- end -}}
 {{- end -}}

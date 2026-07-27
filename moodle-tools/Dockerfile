@@ -1,4 +1,5 @@
-FROM docker.io/bitnami/minideb:bookworm
+FROM docker.io/bitnami/minideb:bookworm@sha256:78b29fc58bf04b48503db1f60ac724fd0bd211046534d11ac5496b9103bc241c
+FROM docker.io/bitnami/minideb:trixie
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -9,7 +10,7 @@ RUN set -x \
     && chmod +x kubectl \
     && mv ./kubectl /usr/local/bin/kubectl \
     && wget -qO /usr/share/keyrings/postgres.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-    && echo "deb [signed-by=/usr/share/keyrings/postgres.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && echo "deb [signed-by=/usr/share/keyrings/postgres.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get -y update \
     && apt-get -y install \
         python3-boto3 \

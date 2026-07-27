@@ -17,6 +17,7 @@ plugin_unzip_path="/tmp/plugins/"
 update_plugins_path="/dbp-moodle/moodledata/UpdatePlugins"
 update_cli_path="/dbp-moodle/moodledata/CliUpdate"
 
+eledia_oidc_plugin_active=false
 last_installed_plugin=""
 cleanup_failed_install() {
     if [[ -n "$last_installed_plugin" ]]; then
@@ -76,6 +77,32 @@ main() {
         plugin_path="${parts[2]}"
         plugin_target_state="${parts[3]}"
 
+        # skip mod_booking while it is not available to download via marketplace
+        if [[ "$plugin_name" = "booking" ]]; then
+            MODULE="dbp-plugins" info "SKIPPING mod_booking since its not available in moodle marketplace"
+            continue
+        fi
+
+        # This is required to avoid conflicts between eledia oidc and oicd including update and uninstall steps
+        if [[ "$plugin_name" = "oidc" && "$eledia_oidc_plugin_active" = true ]]; then
+            continue
+        fi
+
+        # Check to ensure that only eledia oidc or the original oidc plugin will be installed
+        if [[ "$plugin_name" = "eledia_oidc" ]]; then
+            if [[ "$plugin_target_state" = true ]]; then
+                MODULE="dbp-plugins" info "Eledia oidc plugin is activated, starting preparation of the eledia oidc plugin"
+                rm -rf /plugins/auth_oidc.zip
+                mv /plugins/eledia_auth_oidc.zip /plugins/auth_oidc.zip || exit 1
+                plugin_name="oidc"
+                plugin_fullname="auth_oidc"
+                eledia_oidc_plugin_active=true
+            else
+                # if eledia_oidc is not active let the default oidc handle it, to not uninstall it when its actually needed for the standard oidc
+                continue
+            fi
+        fi
+
         plugin_parent_path=$(dirname "$plugin_path")
         full_path="${moodle_path}/${plugin_path}"
 
@@ -91,7 +118,8 @@ main() {
                 installed_plugin_version="$(get_plugin_version "$full_path")"
                 unzip -q "${plugin_zip_path}/${plugin_fullname}.zip" -d "$plugin_unzip_path"
                 new_plugin_path="${plugin_unzip_path}/${plugin_name}"
-                new_plugin_version="$(get_plugin_version "$new_plugin_path")"
+                new_plugin_version="$(get_plugin_version $new_plugin_path)"
+
                 # Plugin version comparison
                 if [ "$new_plugin_version" -gt "$installed_plugin_version" ]; then
                     MODULE="dbp-plugins" info "Plugin ${plugin_name} version changed (installed version: ${installed_plugin_version}, new version: ${new_plugin_version}). Updating..."
