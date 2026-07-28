@@ -53,9 +53,9 @@ moodle:
     type: ClusterIP
 
   persistence:
-    enabled: true
+    enabled: false
     existingClaim: ""
-    storageClass: "standard"
+    storageClass: ""
     size: 1Gi
 
   resources:
