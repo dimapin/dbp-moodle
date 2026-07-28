@@ -155,8 +155,28 @@ jobs:
           kubectl get role          -n "$NAMESPACE" moodle-cronjob
           kubectl get serviceaccount -n "$NAMESPACE" moodle-cronjob
           kubectl get rolebinding   -n "$NAMESPACE" moodle-cronjob
-          kubectl get role          -n "$NAMESPACE" moodle-restore-job
-          kubectl get serviceaccount -n "$NAMESPACE" moodle-restore-job
+
+          RESTORE_ENABLED=$(helm get values "$RELEASE_NAME" -n "$NAMESPACE" -o json | python3 - <<'PY'
+import json
+import sys
+
+try:
+    data = json.load(sys.stdin) or {}
+except json.JSONDecodeError:
+    data = {}
+
+restore = data.get("dbpMoodle", {}).get("restore", {})
+print("true" if str(restore.get("enabled", False)).lower() == "true" else "false")
+PY
+)
+
+          if [ "$RESTORE_ENABLED" = "true" ]; then
+            kubectl get role          -n "$NAMESPACE" moodle-restore-job
+            kubectl get rolebinding   -n "$NAMESPACE" moodle-restore-job
+            kubectl get serviceaccount -n "$NAMESPACE" moodle-restore-job
+          else
+            echo "Restore-RBAC ist deaktiviert für dieses Release; überspringe Restore-Job-Prüfungen."
+          fi
 
       - name: Moodle-Config-Secret (config.php) existiert
         run: kubectl get secret -n "$NAMESPACE" moodle-config-secret
