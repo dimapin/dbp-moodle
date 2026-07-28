@@ -74,7 +74,13 @@ jobs:
       - name: Namespace anlegen
         run: kubectl create namespace "$NAMESPACE"
 
-      # ── 6. Chart deployen ────────────────────────────────────────────────────
+      # ── 6. Moodle-Image lokal bauen und in kind laden ───────────────────────
+      - name: Moodle-Image bauen und in kind laden
+        run: |
+          docker build -f moodle/Dockerfile -t moodle:test moodle/
+          kind load docker-image moodle:test --name moodle-test
+
+      # ── 7. Chart deployen ────────────────────────────────────────────────────
       # --wait wartet auf Deployments, StatefulSets und Jobs.
       # Probes sind in kind-values.yaml deaktiviert → Pods werden sofort Ready.
       - name: Helm install

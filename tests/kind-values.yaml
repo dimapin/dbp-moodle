@@ -39,6 +39,8 @@ dbpMoodle:
 # ── Moodle-Subchart Overrides ────────────────────────────────────────────────
 moodle:
   image:
+    repository: moodle
+    tag: test
     pullPolicy: IfNotPresent   # Kein erneuter Pull bei gecachten Images
 
   # Überspringt die Moodle-DB-Initialisierung (install.php / admin CLI).
