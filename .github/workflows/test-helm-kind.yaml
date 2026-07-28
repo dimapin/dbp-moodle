@@ -109,10 +109,11 @@ jobs:
       # ── 7. Kubernetes-Ressourcen prüfen ──────────────────────────────────────
       - name: Deployment existiert und ist verfügbar
         run: |
-          kubectl get deployment \
+          kubectl wait deployment \
             -n "$NAMESPACE" \
             -l app.kubernetes.io/name=moodle \
-            --field-selector=status.availableReplicas=1
+            --for=condition=Available \
+            --timeout=5m
 
       - name: Service existiert
         run: |
