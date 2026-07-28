@@ -55,4 +55,4 @@ EXPOSE 8080 8443
 
 USER 1001
 
-ENTRYPOINT ["/scripts/init/apache/entrypoint.sh"]
+ENTRYPOINT ["/scripts/init/apache/run.sh"]
