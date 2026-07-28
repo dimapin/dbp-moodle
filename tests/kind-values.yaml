@@ -39,6 +39,7 @@ dbpMoodle:
 # ── Moodle-Subchart Overrides ────────────────────────────────────────────────
 moodle:
   image:
+    registry: ""
     repository: moodle
     tag: test
     pullPolicy: IfNotPresent   # Kein erneuter Pull bei gecachten Images
