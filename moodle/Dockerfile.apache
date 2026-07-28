@@ -47,9 +47,9 @@ RUN apt-get remove -y curl && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /var/run/apache2 && \
-    chmod -R g+w /etc/apache2/ && \
-    chown -R 1001:1001 /etc/apache2 /var/log/apache2 /var/run/apache2 /opt/dbp-moodle /dbp-moodle && \
-    chown -R 1001:root /scripts
+    chmod -R g+w /etc/apache2/ /var/log/apache2 /var/run/apache2 /opt/dbp-moodle /dbp-moodle && \
+    chgrp -R 1001 /etc/apache2 /var/log/apache2 /var/run/apache2 /opt/dbp-moodle /dbp-moodle /scripts 2>/dev/null || true && \
+    chmod -R g+rwX /scripts
 
 EXPOSE 8080 8443
 
