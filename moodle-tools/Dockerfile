@@ -1,5 +1,4 @@
-FROM docker.io/bitnami/minideb:bookworm@sha256:78b29fc58bf04b48503db1f60ac724fd0bd211046534d11ac5496b9103bc241c
-FROM docker.io/bitnami/minideb:trixie
+FROM docker.io/bitnami/minideb:trixie@sha256:8e4fbe9a70cd73a40612c1e708512576bd69d6fde98cca95776b8e854ae730e6
 
 ARG DEBIAN_FRONTEND=noninteractive
 

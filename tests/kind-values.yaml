@@ -1,7 +1,7 @@
 # Werte-Override für lokale kind-Cluster-Tests in CI.
 #
 # Ziele:
-#   - kind-kompatiblen Storage (standard, ReadWriteOnce statt NFS/ReadWriteMany)
+#   - kind-kompatiblen Betrieb ohne dynamische Storage-Provisionierung
 #   - Schnellerer Start: MOODLE_SKIP_BOOTSTRAP überspringt DB-Initialisierung
 #   - Ressourcensparend: reduzierte Requests/Limits für GitHub-Actions-Runner
 #   - Keine schweren optionalen Komponenten (ClamAV, Backup, Ingress, HPA)
@@ -18,9 +18,10 @@ global:
 # ── dbpMoodle-spezifische Overrides ─────────────────────────────────────────
 dbpMoodle:
   external_pvc:
-    storageClass: "standard"
+    enabled: false            # Verhindert das Erzeugen eines neuen PVCs im kind-Test
+    storage_class: "standard"
     accessModes:
-      - ReadWriteOnce           # kind unterstützt kein ReadWriteMany
+      - ReadWriteOnce
 
   allowInternalNetworkingOnly: false
 
@@ -38,6 +39,8 @@ dbpMoodle:
 # ── Moodle-Subchart Overrides ────────────────────────────────────────────────
 moodle:
   image:
+    repository: moodle
+    tag: test
     pullPolicy: IfNotPresent   # Kein erneuter Pull bei gecachten Images
 
   # Überspringt die Moodle-DB-Initialisierung (install.php / admin CLI).
@@ -50,6 +53,12 @@ moodle:
 
   service:
     type: ClusterIP
+
+  persistence:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    size: 1Gi
 
   resources:
     requests:
@@ -83,6 +92,9 @@ moodle:
 # ── PostgreSQL ───────────────────────────────────────────────────────────────
 postgresql:
   enabled: true
+  metrics:
+    serviceMonitor:
+      enabled: false  # Prometheus Operator CRDs sind im KinD-Cluster nicht installiert
   primary:
     resources:
       requests:

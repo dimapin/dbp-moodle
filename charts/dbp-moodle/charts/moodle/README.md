@@ -29,7 +29,7 @@ Moodle(TM) LMS is an open source online Learning Management System widely used a
 | containerSecurityContext.enabled | bool | `true` |  |
 | containerSecurityContext.privileged | bool | `false` |  |
 | containerSecurityContext.readOnlyRootFilesystem | bool | `false` |  |
-| containerSecurityContext.runAsGroup | int | `0` |  |
+| containerSecurityContext.runAsGroup | int | `1001` |  |
 | containerSecurityContext.runAsNonRoot | bool | `true` |  |
 | containerSecurityContext.runAsUser | int | `1001` |  |
 | containerSecurityContext.seLinuxOptions | object | `{}` |  |
@@ -66,7 +66,7 @@ Moodle(TM) LMS is an open source online Learning Management System widely used a
 | image.pullSecrets | list | `[]` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"dbildungsplattform/moodle"` |  |
-| image.tag | string | `"4.5.12-fpm-trixie-8.2.31-dbp2"` |  |
+| image.tag | string | `"4.5.12-fpm-trixie-8.3.32-dbp1"` |  |
 | ingress.annotations | object | `{}` |  |
 | ingress.apiVersion | string | `""` |  |
 | ingress.enabled | bool | `false` |  |

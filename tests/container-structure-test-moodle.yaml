@@ -1,25 +1,25 @@
 schemaVersion: "2.0.0"
 
 commandTests:
-  - name: "PHP version is 8.2"
+  - name: "PHP version is 8.3"
     command: "php"
     args: ["-r", "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;"]
-    expectedOutput: ["8\\.2"]
+    expectedOutput: ["8\\.3"]
 
   - name: "php-fpm binary is present"
     command: "php-fpm"
     args: ["--version"]
-    expectedOutput: ["PHP 8\\.2"]
+    expectedOutput: ["PHP 8\\.3"]
 
-  - name: "PHP extensions: pgsql, redis, gd, ldap, intl, bcmath, opcache"
+  - name: "PHP extensions: pgsql, redis, gd, ldap, intl, bcmath, sodium, opcache"
     command: "php"
     args: ["-m"]
-    expectedOutput: ["pgsql", "redis", "gd", "ldap", "intl", "bcmath", "Zend OPcache"]
+    expectedOutput: ["pgsql", "redis", "gd", "ldap", "intl", "bcmath", "sodium", "Zend OPcache"]
 
-  - name: "PostgreSQL client version 13 is installed"
+  - name: "PostgreSQL client version 16 is installed"
     command: "psql"
     args: ["--version"]
-    expectedOutput: ["psql.*13\\."]
+    expectedOutput: ["psql.*16\\."]
 
   - name: "moosh is available"
     command: "sh"

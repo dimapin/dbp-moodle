@@ -370,7 +370,7 @@ moodle:
     registry: "ghcr.io"
     repository: "dbildungsplattform/moodle"
     # -- The dbp-moodle image which is build for this helm chart
-    tag: "4.5.12-fpm-trixie-8.2.31-dbp2"
+    tag: "4.5.12-fpm-trixie-8.3.32-dbp1"
     pullPolicy: Always
     # -- Debug mode for more detailed moodle installation and log output
     debug: false
@@ -508,7 +508,7 @@ postgresql:
   # Switch to bitnamilegacy, see https://github.com/bitnami/charts/issues/35164
   image:
     repository: bitnamilegacy/postgresql
-    tag: "14.18.0-debian-12-r0"
+    tag: "16.6.0-debian-12-r2"
   volumePermissions:
     image:
       repository: bitnamilegacy/os-shell
@@ -693,7 +693,7 @@ etherpad-postgresql:
   # Switch to bitnamilegacy, see https://github.com/bitnami/charts/issues/35164
   image:
     repository: bitnamilegacy/postgresql
-    tag: "14.18.0-debian-12-r0"
+    tag: "16.6.0-debian-12-r2"
   volumePermissions:
     image:
       repository: bitnamilegacy/os-shell

@@ -3,12 +3,16 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-# set -o xtrace # Uncomment this line for debugging purposes
 
 # Load libraries
 . /scripts/liblog.sh
 . /scripts/libapache.sh
 . /scripts/libfs.sh
+
+# Allow explicit commands such as "apache2ctl -v" to pass through without starting Apache.
+if [[ $# -gt 0 ]]; then
+    exec "$@"
+fi
 
 # Load Apache environment (defines APACHE_VHOSTS_DIR, PHP_FPM_HOST, PHP_FPM_PORT, ...)
 . /scripts/init/apache/apache-env.sh
@@ -20,7 +24,7 @@ MODULE=apache info "Starting Apache setup"
 # this overwrites those placeholders with the actual runtime values.
 template_dir="/scripts/init/apache/templates"
 ensure_dir_exists "${APACHE_VHOSTS_DIR}"
-envsubst < "${template_dir}/default.conf.tpl"     > "${APACHE_VHOSTS_DIR}/default.conf"
+envsubst < "${template_dir}/default.conf.tpl" > "${APACHE_VHOSTS_DIR}/default.conf"
 envsubst < "${template_dir}/default-ssl.conf.tpl" > "${APACHE_VHOSTS_DIR}/default-ssl.conf"
 
 # Generate SSL cert, configure ports and security settings

@@ -8,9 +8,10 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
 
 | Eigenschaft        | Wert                          |
 |--------------------|-------------------------------|
-| Moodle-Version     | 4.5.10                        |
-| PHP-Version        | 8.2.30                        |
-| Chart-Version      | 1.1.2                         |
+| Moodle-Version     | 4.5.12                        |
+| PHP-Version        | 8.3.32 (FPM)                  |
+| Basis-Image        | Debian 13 (Trixie) für Moodle- und Tools-Image, Debian 12 (Bookworm) für Apache-Image |
+| Chart-Version      | 1.6.2                         |
 | Helm-Version       | ≥ 3.16.3                      |
 | Kubernetes-Version | ≥ 1.25 (getestet mit ≥ 1.33)  |
 | Lizenz             | Apache-2.0                    |
@@ -21,7 +22,7 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
 
 ### 2.1 Moodle-Kernsystem
 
-- Bereitstellung von Moodle LMS in Version 4.5.10 mit PHP 8.2 (FPM)
+- Bereitstellung von Moodle LMS in Version 4.5.12 mit PHP 8.3 (FPM)
 - Unterstützung mehrsprachiger Konfiguration (Deutsch `de`, Englisch `en`)
 - Automatisches Datenbank-Setup und Migrations-Handling beim Start
 - Konfiguration via `config.php` (generiert aus Helm-Values und Umgebungsvariablen)
@@ -29,6 +30,7 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
 ### 2.2 Plugin-Management
 
 - Installation von Plugins zur Image-Build-Zeit via `downloadPlugins.sh` (Plugin-ZIPs unter `/plugins` im Image)
+- Bezugsquelle ist seit Chart 1.6.2 der Moodle Marketplace (zuvor das Moodle Plugin Directory)
 - Abhängigkeitsbasierte Installationsreihenfolge (`local_wunderbyte_table`, `tool_certificate` und die `qbehaviour_*`-Plugins werden zuerst installiert)
 - `auth_oidc` wird als Sonderfall aus `dBildungsplattform/dbp-moodle-plugin-oidc` (Branch `v_45`) gebaut
 - Aktivierung zur Laufzeit über `global.moodlePlugins` in den Helm-Values → ConfigMap `moodle-plugins` → Env `MOODLE_PLUGINS` → `pluginCheck.sh` (installiert bzw. deinstalliert entsprechend dem Soll-Zustand)
@@ -37,7 +39,7 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
 
   | Kategorie          | Plugins                                                                                     |
   |--------------------|---------------------------------------------------------------------------------------------|
-  | Aktivitäten        | booking, board, checklist, choicegroup, coursecertificate, etherpadlite, hvp, pdfannotator, subcourse, unilabel, videotime, zoom |
+  | Aktivitäten        | board, checklist, choicegroup, coursecertificate, etherpadlite, hvp, pdfannotator, subcourse, unilabel, videotime, zoom |
   | Kursformate        | remuiformat, tiles, topcoll                                                                  |
   | Themes             | adaptable, boost_magnific, boost_union                                                       |
   | Blöcke             | completion_progress, sharing_cart, stash, xp                                                 |
@@ -48,11 +50,13 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
   | Sonstige           | availability_cohort, local_staticpage, local_wunderbyte_table                                |
 
 > **Bekannte Lücke:** `global.moodlePlugins` bietet zusätzlich Schalter für `groupselect`, `jitsi`, `skype`, `reengagement`, `geogebra`, `flexsections`, `multitopic`, `saml2`, `dash`, `snap` und `customfield_dynamic`. Für diese Plugins wird in `downloadPlugins.sh` kein ZIP heruntergeladen — ein Aktivieren schlägt zur Laufzeit fehl.
+>
+> **`mod_booking` derzeit nicht enthalten:** Das Plugin ist über keine der genutzten Bezugsquellen verfügbar; die GitHub-Sonderlogik (`download_booking`) ist in `downloadPlugins.sh` auskommentiert. Die Abhängigkeit `local_wunderbyte_table` wird weiterhin installiert.
 
 ### 2.3 Datenbank
 
-- **Primäre Datenbank:** PostgreSQL (Bitnami-Chart v15.5.38) oder externe Managed-DB (z. B. AWS RDS)
-- **Etherpad-Datenbank:** Separate PostgreSQL-Instanz, optional (Bitnami-Chart v15.5.38, Image-Tag `14.18.0-debian-12-r0`)
+- **Primäre Datenbank:** PostgreSQL (Bitnami-Chart v15.5.38, Image-Tag `16.6.0-debian-12-r2`) oder externe Managed-DB (z. B. AWS RDS)
+- **Etherpad-Datenbank:** Separate PostgreSQL-Instanz, optional (Bitnami-Chart v15.5.38, Image-Tag `16.6.0-debian-12-r2`)
 - Datenbankpasswörter werden über Kubernetes-Secrets verwaltet
 
 ### 2.4 Session-Management
@@ -67,10 +71,10 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
 
 ### 2.6 Backup & Restore
 
-- Werkzeug: `duply` (inkrementelles Backup via duplicity)
+- Werkzeug: `duply` (inkrementelles Backup via duplicity), ausgeführt im Image `ghcr.io/dbildungsplattform/moodle-tools:1.1.15`
 - Ziel: S3-kompatible Endpunkte (AWS S3, MinIO, etc.)
 - Zeitplan: täglich 03:00 Uhr, wöchentliches Full-Backup, Aufbewahrung 6 Monate
-- Verschlüsselung: GPG (konfigurierbare Schlüssel)
+- Verschlüsselung: GPG — Schlüssel werden über `dbpMoodle.backup.gpg_key_names` als kommaseparierte Liste von Schlüsselnamen angegeben; daraus erzeugt `_helpers.tpl` zur Laufzeit `dbpMoodle.backup.gpg_key_names.cmd`
 - Restore: One-Shot-Job für Rollback-Szenarien
 
 ### 2.7 Optionale Integrationen
@@ -112,6 +116,7 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
   - Maximale Schrittweite je Periode: 50 % (up) / 25 % (down)
   - Periodendauer: 15 s (up) / 60 s (down); `stabilizationWindowSeconds: 0` beim Scale-up
 - Pod Disruption Budgets (PDB) für Update-Sicherheit (`moodle.pdb.create: true`)
+- Startup-Probe aktiv (`moodle.startupProbe.enabled: true`, `failureThreshold: 120`, `periodSeconds: 10` → ca. 20 Minuten). Verhindert, dass die Liveness-Probe den Pod während eines länger laufenden Versionsupdates neu startet
 - Pre-Update-Hooks skalieren das Deployment kontrolliert herunter und sichern es vor dem Update
 
 ### 3.3 Performance
@@ -158,7 +163,7 @@ Dieses Dokument beschreibt die funktionalen und nicht-funktionalen Anforderungen
 
 | Chart (Alias)                       | Version | Quelle                      | Zweck                          |
 |-------------------------------------|---------|-----------------------------|--------------------------------|
-| `moodle`                            | 27.0.4  | `file://charts/moodle`      | Moodle-Kerndeployment          |
+| `moodle`                            | 27.0.5  | `file://charts/moodle`      | Moodle-Kerndeployment          |
 | `redis`                             | 19.5.3  | bitnami                     | Session-Store (optional)       |
 | `postgresql`                        | 15.5.38 | bitnami                     | Primäre Datenbank (optional)   |
 | `postgresql` (`etherpad-postgresql`)| 15.5.38 | bitnami                     | Etherpad-Datenbank (optional)  |
