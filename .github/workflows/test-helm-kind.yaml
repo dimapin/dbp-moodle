@@ -156,19 +156,7 @@ jobs:
           kubectl get serviceaccount -n "$NAMESPACE" moodle-cronjob
           kubectl get rolebinding   -n "$NAMESPACE" moodle-cronjob
 
-          RESTORE_ENABLED=$(helm get values "$RELEASE_NAME" -n "$NAMESPACE" -o json | python3 - <<'PY'
-import json
-import sys
-
-try:
-    data = json.load(sys.stdin) or {}
-except json.JSONDecodeError:
-    data = {}
-
-restore = data.get("dbpMoodle", {}).get("restore", {})
-print("true" if str(restore.get("enabled", False)).lower() == "true" else "false")
-PY
-)
+          RESTORE_ENABLED=$(helm get values "$RELEASE_NAME" -n "$NAMESPACE" -o json | python3 -c 'import json,sys; data=json.load(sys.stdin) or {}; restore=data.get("dbpMoodle", {}).get("restore", {}); print("true" if str(restore.get("enabled", False)).lower() == "true" else "false")')
 
           if [ "$RESTORE_ENABLED" = "true" ]; then
             kubectl get role          -n "$NAMESPACE" moodle-restore-job
