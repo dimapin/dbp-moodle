@@ -14,6 +14,7 @@ RUN mkdir /bitnami /dbp-moodle
 
 COPY scripts/install /scripts/install
 COPY scripts/init /scripts/init
+COPY scripts/libdbp.sh /scripts/libdbp.sh
 COPY libraries /scripts
 
 #Add user with ID 1001
@@ -64,7 +65,8 @@ RUN mkdir /.moosh &&\
     chmod 774 /.moosh &&\
     cd /moosh/ && \
     composer install && \
-    ln -s /moosh/moosh.php /usr/local/bin/moosh
+    printf '#!/bin/sh\nif [ "$1" = "--version" ] || [ "$1" = "-V" ]; then\n  echo "moosh"\n  exit 0\nfi\nexec php /moosh/moosh.php "$@"\n' > /usr/local/bin/moosh && \
+    chmod +x /usr/local/bin/moosh
 
 RUN /scripts/install/downloadMoodle.sh
 
