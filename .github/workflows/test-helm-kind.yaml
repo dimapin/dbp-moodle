@@ -167,7 +167,9 @@ jobs:
           fi
 
       - name: Moodle-Config-Secret (config.php) existiert
-        run: kubectl get secret -n "$NAMESPACE" moodle-config-secret
+        run: |
+          SECRET_NAME=$(helm get values "$RELEASE_NAME" -n "$NAMESPACE" -o json | python3 -c 'import json,sys; data=json.load(sys.stdin) or {}; php=data.get("dbpMoodle", {}).get("phpConfig", {}); existing=str(php.get("existingConfig", "")).strip(); print("moodle-php-config" if not existing else existing)')
+          kubectl get secret -n "$NAMESPACE" "$SECRET_NAME"
 
       - name: Alle Pods laufen ohne Crash-Loop
         run: |
