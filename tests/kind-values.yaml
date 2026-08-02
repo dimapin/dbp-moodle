@@ -39,6 +39,7 @@ dbpMoodle:
 # ── Moodle-Subchart Overrides ────────────────────────────────────────────────
 moodle:
   image:
+    registry: ""
     repository: moodle
     tag: test
     pullPolicy: IfNotPresent   # Kein erneuter Pull bei gecachten Images
@@ -53,6 +54,13 @@ moodle:
 
   service:
     type: ClusterIP
+
+  # Das im CI gebaute moodle:test Image startet PHP-FPM (Port 9000),
+  # aber keinen Apache-Listener auf 8080. Für den TCP-Smoke-Test muss
+  # der Service daher auf den tatsächlichen Container-Port zeigen.
+  containerPorts:
+    http: 9000
+    https: 8443
 
   persistence:
     enabled: false
