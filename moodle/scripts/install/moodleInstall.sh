@@ -38,9 +38,5 @@ for dir in "$MOODLE_BASE_DIR" "$MOODLE_VOLUME_DIR" "$MOODLE_DATA_DIR"; do
     configure_permissions_ownership "$dir" -d "775" -f "664" -u "1001" -g "1001"
 done
 
-# Configure required PHP options for application to work properly, based on build-time defaults
-info "Configuring default PHP options for Moodle"
-php_conf_set extension "pgsql"
-
 # This is necessary for the libpersistence.sh scripts to work when running as non-root
 chmod g+w /opt/dbp-moodle

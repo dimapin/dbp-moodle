@@ -23,6 +23,9 @@ RUN apt-get update && apt-get upgrade -y && \
 # apt resolves the package dependencies from the distribution repository,
 # so no manually maintained library list is required.
 RUN apt-get update && \
+    apt-get install -y libapr1 libaprutil1 libc6 libaprutil1-dbd-sqlite3 libcurl4 \
+    libaprutil1-ldap libldap-2.5-0 libexpat1 liblua5.3-0 libssl3 libxml2 media-types procps \
+    perl libjansson4 && \
     curl -fLO ${APACHE_DOWNLOAD_URL}apache2-bin_${APACHE_VERSION}_amd64.deb && \
     curl -fLO ${APACHE_DOWNLOAD_URL}apache2-data_${APACHE_VERSION}_all.deb && \
     curl -fLO ${APACHE_DOWNLOAD_URL}apache2-utils_${APACHE_VERSION}_amd64.deb && \

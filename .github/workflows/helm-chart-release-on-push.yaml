@@ -11,7 +11,7 @@ concurrency:
 jobs:
   build_image_on_push:
     name: "Publish image and scan with trivy"
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
     permissions:
       packages: write
       security-events: write
@@ -27,7 +27,10 @@ jobs:
       context: "./moodle/"
 
   release_helm:
-    if: github.repository_owner == 'dBildungsplattform'
+    needs: build_image_on_push
+    if: ${{ github.repository_owner == 'dBildungsplattform' }}
+    permissions:
+      contents: read
     uses: dBildungsplattform/dbp-github-workflows/.github/workflows/chart-release.yaml@7
     secrets: inherit
     with:
