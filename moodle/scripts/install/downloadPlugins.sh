@@ -4,6 +4,9 @@
 major_minor="${MOODLE_VERSION%.*}"
 plugin_index=0
 moosh_php_memory_limit="${MOOSH_PHP_MEMORY_LIMIT:-512M}"
+# When false (default), missing/empty plugin artifacts do not fail image build.
+# Set to "true" to enforce strict failure on any missing plugin download.
+moodle_plugin_download_strict="${MOODLE_PLUGIN_DOWNLOAD_STRICT:-false}"
 
 plugin_dependency_list=(
     local_wunderbyte_table # Dependency of mod_booking
@@ -153,7 +156,7 @@ check_plugin_size() {
         echo "WARNING: Moodle Plugin '$plugin_name' is empty (size 0 bytes). Trying GitHub fallback..." >&2
         rm -f "/plugins/${plugin_name}.zip"
         if ! download_plugin_github "$plugin_name"; then
-            if [ -n "${plugin_allow_missing[$plugin_name]}" ]; then
+            if [ -n "${plugin_allow_missing[$plugin_name]}" ] || [ "$moodle_plugin_download_strict" != "true" ]; then
                 echo "WARNING: Moodle Plugin '$plugin_name' is unavailable and marked optional for image build. Continuing..." >&2
                 return 0
             fi
@@ -163,7 +166,7 @@ check_plugin_size() {
         local fallback_size
         fallback_size=$(stat -c%s "/plugins/${plugin_name}.zip" 2>/dev/null || echo 0)
         if [ "$fallback_size" -eq 0 ]; then
-            if [ -n "${plugin_allow_missing[$plugin_name]}" ]; then
+            if [ -n "${plugin_allow_missing[$plugin_name]}" ] || [ "$moodle_plugin_download_strict" != "true" ]; then
                 echo "WARNING: Moodle Plugin '$plugin_name' is still empty after fallback but marked optional for image build. Continuing..." >&2
                 rm -f "/plugins/${plugin_name}.zip"
                 return 0
