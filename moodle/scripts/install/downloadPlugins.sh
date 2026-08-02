@@ -63,6 +63,9 @@ declare -A plugin_github_repos=(
 # fail, the build continues and plugin activation can still be controlled at runtime.
 declare -A plugin_allow_missing=(
     ["tool_certificate"]=1
+    ["qbehaviour_adaptivemultipart"]=1
+    ["qbehaviour_dfexplicitvaildate"]=1
+    ["qbehaviour_dfcbmexplicitvaildate"]=1
 )
 
 plugin_github_branch_fallbacks=(
