@@ -22,7 +22,7 @@ metadata:
     app.kubernetes.io/component: test
   annotations:
     "helm.sh/hook": test
-    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+    "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   restartPolicy: Never
   containers:
@@ -39,16 +39,41 @@ spec:
           POSTGRES_SVC="{{ .Release.Name }}-postgresql"
           MOODLE_PORT=80
           POSTGRES_PORT=5432
+          MAX_ATTEMPTS=60
+          SLEEP_SECONDS=5
+
+          wait_for_tcp() {
+            HOST="$1"
+            PORT="$2"
+            NAME="$3"
+            ATTEMPT=1
+
+            while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+              if nc -z -w5 "$HOST" "$PORT" >/dev/null 2>&1; then
+                echo "   OK - ${NAME} erreichbar (${HOST}:${PORT})"
+                return 0
+              fi
+
+              echo "   Versuch ${ATTEMPT}/${MAX_ATTEMPTS} fehlgeschlagen für ${NAME} (${HOST}:${PORT}), warte ${SLEEP_SECONDS}s ..."
+              if [ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ]; then
+                break
+              fi
+
+              ATTEMPT=$((ATTEMPT + 1))
+              sleep "$SLEEP_SECONDS"
+            done
+
+            echo "   FEHLER - ${NAME} nach ${MAX_ATTEMPTS} Versuchen nicht erreichbar (${HOST}:${PORT})"
+            return 1
+          }
 
           echo "=== Smoke-Test: TCP-Konnektivität ==="
 
           echo ">> Teste Moodle-Service ${MOODLE_SVC}:${MOODLE_PORT} ..."
-          nc -z -w5 "${MOODLE_SVC}" "${MOODLE_PORT}"
-          echo "   OK – Moodle-Service erreichbar"
+          wait_for_tcp "${MOODLE_SVC}" "${MOODLE_PORT}" "Moodle-Service"
 
           echo ">> Teste PostgreSQL-Service ${POSTGRES_SVC}:${POSTGRES_PORT} ..."
-          nc -z -w5 "${POSTGRES_SVC}" "${POSTGRES_PORT}"
-          echo "   OK – PostgreSQL-Service erreichbar"
+          wait_for_tcp "${POSTGRES_SVC}" "${POSTGRES_PORT}" "PostgreSQL-Service"
 
           echo "=== Alle Tests bestanden ==="
       resources:

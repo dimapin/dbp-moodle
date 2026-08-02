@@ -192,6 +192,7 @@ jobs:
         run: |
           helm test "$RELEASE_NAME" \
             --namespace "$NAMESPACE" \
+            --logs \
             --timeout 5m
 
       # ── 9. Logs und Events bei Fehler ────────────────────────────────────────
