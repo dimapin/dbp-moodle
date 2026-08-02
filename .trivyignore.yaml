@@ -14,13 +14,11 @@ misconfigurations:
   #   - Moodle-Core schreibt in /opt/dbp-moodle/moodle/ (Plugin-Assets)
   #   - Das Moodledata-Verzeichnis wird als separates Volume eingebunden
   # Kompensierende Maßnahme:
-  #   - Container läuft als non-root (UID 1001, runAsNonRoot: true)
+  #   - Container läuft als non-root (UID/GID 1001, runAsNonRoot: true)
   #   - Alle Linux-Capabilities werden gedroppt (capabilities.drop: [ALL])
   #   - Seccomp-Profil RuntimeDefault ist aktiv (moodle-subchart)
-  #   - ClamAV scannt hochgeladene Dateien
+  #   - Optional: ClamAV scannt hochgeladene Dateien (clamav.enabled, per Default deaktiviert)
   - id: "AVD-KSV-0014"
-    paths:
-      - "charts/dbp-moodle"
     reason: >
       Moodle (PHP-FPM) benötigt ein beschreibbares Filesystem für Session-Daten,
       OPcache und Plugin-Assets. Mitigiert durch non-root Ausführung, ALL-Capabilities-Drop
@@ -35,16 +33,30 @@ misconfigurations:
   #   - runAsNonRoot: true ist gesetzt (Systemprüfung durch Kubernetes)
   #   - UID 1001 ist kein System-User (nicht in /etc/passwd der meisten Distros)
   - id: "AVD-KSV-0020"
-    paths:
-      - "charts/dbp-moodle"
     reason: >
       UID 1001 ist im Container-Image fest definiert. runAsNonRoot: true verhindert
       Root-Ausführung. Migration auf UID > 10000 erfordert Image-Rebuild-Zyklus
       (BSI SYS.1.6.A16 – geplante Verbesserung, aktuell akzeptiertes Restrisiko).
 
   - id: "AVD-KSV-0021"
-    paths:
-      - "charts/dbp-moodle"
     reason: >
       GID 1001 ist im Container-Image fest definiert (fsGroup, runAsGroup).
       Identische Begründung wie AVD-KSV-0020.
+
+  # ── KSV053 — pods/exec in RBAC-Rolle ────────────────────────────────────────
+  # BSI SYS.1.6.A15: Die moodle-cronjob-Rolle benötigt Zugriff auf pods/exec,
+  # da cronjob.sh mittels `kubectl exec` cron.php im laufenden Moodle-Pod ausführt.
+  # Dies ist technisch notwendig, weil:
+  #   - Moodle-Cron muss im Kontext des laufenden PHP-FPM-Prozesses ausgeführt werden
+  #   - Ein separater Pod hätte keinen Zugriff auf Sessions, OPcache und Moodle-State
+  # Kompensierende Maßnahme:
+  #   - Die Rolle ist auf den eigenen Namespace beschränkt (kein ClusterRole)
+  #   - ServiceAccount ist ausschließlich dem moodlecronjob-Pod zugewiesen
+  #   - Der CronJob-Pod läuft als non-root (UID/GID 1001, runAsNonRoot: true)
+  #   - Alle Linux-Capabilities werden gedroppt (capabilities.drop: [ALL])
+  - id: "AVD-KSV-0053"
+    reason: >
+      Der moodle-cronjob benötigt pods/exec (create-Verb), um via kubectl exec
+      cron.php im laufenden Moodle-Pod auszuführen (charts/dbp-moodle/scripts/cronjob.sh).
+      Mitigiert durch Namespace-Beschränkung, non-root SA und ALL-Capabilities-Drop
+      (BSI SYS.1.6.A15 – akzeptiertes Restrisiko).

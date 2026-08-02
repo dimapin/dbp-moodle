@@ -1,15 +1,20 @@
-FROM php:8.2.30-fpm-bookworm AS build
+FROM php:8.3.32-fpm-trixie AS build
 USER root
-ARG MOODLE_VERSION=${MOODLE_VERSION:-"4.5.10"}
+ARG MOODLE_VERSION=${MOODLE_VERSION:-"4.5.12"}
 #This is the path moodle will be placed after downloading for our Moodle Update Pipeline
 ARG MOODLE_PATH="/opt/dbp-moodle/moodle"
 ARG EXTRA_LOCALES=""
+#At the moment Apache will be updated to the latest release as unattended update during the build process
+ARG APACHE_VERSION=${APACHE_VERSION:-"2.4.67-1~deb13u1"}
+ARG APACHE_DOWNLOAD_URL="https://snapshot.debian.org/archive/debian/20260508T024741Z/pool/main/a/apache2"
+WORKDIR /
 ARG WITH_ALL_LOCALES="no"
 WORKDIR /
 RUN mkdir /bitnami /dbp-moodle
 
 COPY scripts/install /scripts/install
 COPY scripts/init /scripts/init
+COPY scripts/libdbp.sh /scripts/libdbp.sh
 COPY libraries /scripts
 
 #Add user with ID 1001
@@ -23,15 +28,28 @@ RUN apt-get update && apt-get upgrade -y && \
     pecl install redis && \
     docker-php-ext-enable redis
 
-# Install psql Version 13.x like in the other bitnami moodle image
+# Install psql client 16 to match Moodle 5.2+ minimum PostgreSQL requirements
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+    echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 
 RUN apt-get update && \
-    apt-get install -y postgresql-client-13
+    apt-get install -y postgresql-client-16
+
+# Install apache2 and its dependencies
+RUN apt-get install -y libapr1 libaprutil1 libc6 libaprutil1-dbd-sqlite3 libcurl4 libaprutil1-ldap libexpat1 liblua5.3-0 libssl3 libxml2 media-types procps
+RUN curl -LO ${APACHE_DOWNLOAD_URL}/apache2-bin_${APACHE_VERSION}_amd64.deb && \
+    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-data_${APACHE_VERSION}_all.deb && \
+    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-utils_${APACHE_VERSION}_amd64.deb && \
+    curl -LO ${APACHE_DOWNLOAD_URL}/apache2_${APACHE_VERSION}_amd64.deb && \
+    dpkg -i *.deb || apt-get -y -f install && \
+    apt-get install -y libapache2-mod-fcgid && \
+    rm *.deb
 
 #Install other dependencies
-RUN apt-get install -y nano gettext libpq5 libedit2 libfontconfig1 libfreetype6 libglib2.0-0 libjpeg62-turbo liblcms2-2 libltdl7 libmagickcore-6.q16-6 libmagickwand-6.q16-6 libmemcached11 libpcre3 libpng16-16 libtidy5deb1 libwebp7 libxslt1.1 libzip4 libbz2-dev
+
+RUN apt-get update && \
+    apt-get install -y nano gettext imagemagick libmemcached11 libpq5 libzip-dev libxml2 libxslt1.1 && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN /scripts/init/phpRedisInstall.sh
 
@@ -41,13 +59,14 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 
 # Install moosh for plugin management
 # Because of current problems with moosh and no new release we use commit hashes. This one is the version bump to 1.38
-RUN curl -L https://github.com/tmuras/moosh/archive/12bf474815d0be2395a6689f9fa833eb0a7b83b0.tar.gz -o moosh.tar.gz && \
+RUN curl -L https://github.com/tmuras/moosh/archive/c7674a7b8de77a3205a289c89bed093377a20004.tar.gz -o moosh.tar.gz && \
     mkdir /moosh && tar -xzvf moosh.tar.gz -C /moosh/ --strip-components=1
 RUN mkdir /.moosh &&\
     chmod 774 /.moosh &&\
     cd /moosh/ && \
     composer install && \
-    ln -s /moosh/moosh.php /usr/local/bin/moosh
+    printf '#!/bin/sh\nif [ "$1" = "--version" ] || [ "$1" = "-V" ]; then\n  echo "moosh"\n  exit 0\nfi\nexec php /moosh/moosh.php "$@"\n' > /usr/local/bin/moosh && \
+    chmod +x /usr/local/bin/moosh
 
 RUN /scripts/install/downloadMoodle.sh
 
@@ -57,7 +76,7 @@ RUN MAJOR_MINOR=$(echo "$MOODLE_VERSION" | cut -d. -f1,2) && \
 
 # Hardening
 RUN apt-get update && apt-get upgrade -y && \
-    apt-get clean && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+    apt-get clean && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 RUN find / -perm /6000 -type f -exec chmod a-s {} \; || true
 RUN sed -i -e '/pam_loginuid.so/ s/^#*/#/' /etc/pam.d/cron
 

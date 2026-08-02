@@ -115,4 +115,4 @@ metadataTest:
     - "8443"
   user: "1001"
   entrypoint:
-    - "/scripts/init/apache/entrypoint.sh"
+    - "/scripts/init/apache/run.sh"

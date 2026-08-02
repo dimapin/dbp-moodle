@@ -24,31 +24,31 @@ tests:
       - isKind:
           of: Role
       - notContains:
-          path: spec.rules[0].verbs
+          path: rules[0].verbs
           content: "*"
 
   - it: "cronjob-rolle: keine Wildcard-ApiGroups"
     template: templates/roles/moodle-cronjob-role.yaml
     asserts:
       - notContains:
-          path: spec.rules[0].apiGroups
+          path: rules[0].apiGroups
           content: "*"
 
   - it: "cronjob-rolle: kein 'delete'-Verb (read/exec only)"
     template: templates/roles/moodle-cronjob-role.yaml
     asserts:
       - notContains:
-          path: spec.rules[0].verbs
+          path: rules[0].verbs
           content: "delete"
 
   - it: "cronjob-rolle: erlaubt Zugriff auf pods und pods/exec (für cron.php)"
     template: templates/roles/moodle-cronjob-role.yaml
     asserts:
       - contains:
-          path: spec.rules[0].resources
+          path: rules[0].resources
           content: "pods"
       - contains:
-          path: spec.rules[0].resources
+          path: rules[0].resources
           content: "pods/exec"
 
   # ── Backup-Rolle ─────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ tests:
       - isKind:
           of: Role
       - notContains:
-          path: spec.rules[0].verbs
+          path: rules[0].verbs
           content: "*"
 
   - it: "backup-rolle: kein 'delete'-Verb auf Deployments"
@@ -69,7 +69,7 @@ tests:
       dbpMoodle.backup.enabled: true
     asserts:
       - notContains:
-          path: spec.rules[0].verbs
+          path: rules[0].verbs
           content: "delete"
 
   - it: "backup-rolle: keine Wildcard-ApiGroups"
@@ -78,7 +78,7 @@ tests:
       dbpMoodle.backup.enabled: true
     asserts:
       - notContains:
-          path: spec.rules[0].apiGroups
+          path: rules[0].apiGroups
           content: "*"
 
   - it: "backup-rolle: nicht vorhanden wenn backup.enabled=false (Standard)"
@@ -92,18 +92,22 @@ tests:
   # ── Restore-Rolle ─────────────────────────────────────────────────────────────
   - it: "restore-rolle: keine Wildcard-Verben"
     template: templates/roles/restore-role.yaml
+    set:
+      dbpMoodle.restore.enabled: true
     asserts:
       - isKind:
           of: Role
       - notContains:
-          path: spec.rules[0].verbs
+          path: rules[0].verbs
           content: "*"
 
   - it: "restore-rolle: kein 'delete'-Verb"
     template: templates/roles/restore-role.yaml
+    set:
+      dbpMoodle.restore.enabled: true
     asserts:
       - notContains:
-          path: spec.rules[0].verbs
+          path: rules[0].verbs
           content: "delete"
 
   # ── Service-Accounts ─────────────────────────────────────────────────────────
@@ -118,12 +122,16 @@ tests:
 
   - it: "backup-serviceaccount: existiert"
     template: templates/serviceaccounts/backup-serviceaccount.yaml
+    set:
+      dbpMoodle.backup.enabled: true
     asserts:
       - isKind:
           of: ServiceAccount
 
   - it: "restore-serviceaccount: existiert"
     template: templates/serviceaccounts/restore-serviceaccount.yaml
+    set:
+      dbpMoodle.restore.enabled: true
     asserts:
       - isKind:
           of: ServiceAccount

@@ -1,5 +1,5 @@
-FROM debian:bookworm-slim AS build
-ARG APACHE_VERSION=${APACHE_VERSION:-"2.4.66-1~deb12u1"}
+FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS build
+ARG APACHE_VERSION="2.4.66-1~deb12u1"
 ARG APACHE_DOWNLOAD_URL="https://snapshot.debian.org/archive/debian/20260131T202859Z/pool/main/a/apache2/"
 WORKDIR /
 RUN mkdir /bitnami /dbp-moodle /opt/dbp-moodle
@@ -19,17 +19,23 @@ RUN apt-get update && apt-get upgrade -y && \
     curl ca-certificates gettext-base openssl procps && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Apache2 and its dependencies from the pinned Debian snapshot
+# Install Apache2 from the pinned Debian snapshot.
+# apt resolves the package dependencies from the distribution repository,
+# so no manually maintained library list is required.
 RUN apt-get update && \
     apt-get install -y libapr1 libaprutil1 libc6 libaprutil1-dbd-sqlite3 libcurl4 \
-    libaprutil1-ldap libldap-2.5-0 libexpat1 liblua5.3-0 libssl3 libxml2 media-types procps && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-bin_${APACHE_VERSION}_amd64.deb && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-data_${APACHE_VERSION}_all.deb && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2-utils_${APACHE_VERSION}_amd64.deb && \
-    curl -LO ${APACHE_DOWNLOAD_URL}/apache2_${APACHE_VERSION}_amd64.deb && \
-    dpkg -i *.deb && \
-    apt-get install -y libapache2-mod-fcgid && \
-    rm *.deb && \
+    libaprutil1-ldap libldap-2.5-0 libexpat1 liblua5.3-0 libssl3 libxml2 media-types procps \
+    perl libjansson4 && \
+    curl -fLO ${APACHE_DOWNLOAD_URL}apache2-bin_${APACHE_VERSION}_amd64.deb && \
+    curl -fLO ${APACHE_DOWNLOAD_URL}apache2-data_${APACHE_VERSION}_all.deb && \
+    curl -fLO ${APACHE_DOWNLOAD_URL}apache2-utils_${APACHE_VERSION}_amd64.deb && \
+    curl -fLO ${APACHE_DOWNLOAD_URL}apache2_${APACHE_VERSION}_amd64.deb && \
+    apt-get install -y --no-install-recommends \
+    ./apache2-bin_${APACHE_VERSION}_amd64.deb \
+    ./apache2-data_${APACHE_VERSION}_all.deb \
+    ./apache2-utils_${APACHE_VERSION}_amd64.deb \
+    ./apache2_${APACHE_VERSION}_amd64.deb && \
+    rm -f *.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY scripts/init/apache/httpd.conf /etc/apache2/apache2.conf
@@ -43,12 +49,15 @@ RUN apt-get remove -y curl && \
     apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN chmod -R g+w /etc/apache2/ && \
-    chown -R 1001:1001 /etc/apache2 /var/log/apache2 /opt/dbp-moodle /dbp-moodle && \
-    chown -R 1001:root /scripts
+RUN mkdir -p /var/run/apache2 && \
+    chmod -R g+w /etc/apache2/ /var/log/apache2 /var/run/apache2 /opt/dbp-moodle /dbp-moodle && \
+    chgrp -R 1001 /etc/apache2 /var/log/apache2 /var/run/apache2 /opt/dbp-moodle /dbp-moodle /scripts 2>/dev/null || true && \
+    chmod -R g+rwX /scripts && \
+    cp /scripts/init/apache/apache2ctl-wrapper.sh /usr/local/bin/apache2ctl && \
+    chmod +x /usr/local/bin/apache2ctl
 
 EXPOSE 8080 8443
 
 USER 1001
 
-ENTRYPOINT ["/scripts/init/apache/entrypoint.sh"]
+ENTRYPOINT ["/scripts/init/apache/run.sh"]

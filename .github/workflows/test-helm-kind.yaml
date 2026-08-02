@@ -74,25 +74,46 @@ jobs:
       - name: Namespace anlegen
         run: kubectl create namespace "$NAMESPACE"
 
-      # ── 6. Chart deployen ────────────────────────────────────────────────────
+      # ── 6. Moodle-Image lokal bauen und in kind laden ───────────────────────
+      - name: Moodle-Image bauen und in kind laden
+        run: |
+          docker build -f moodle/Dockerfile -t moodle:test moodle/
+          kind load docker-image moodle:test --name moodle-test
+
+      # ── 7. Chart deployen ────────────────────────────────────────────────────
       # --wait wartet auf Deployments, StatefulSets und Jobs.
       # Probes sind in kind-values.yaml deaktiviert → Pods werden sofort Ready.
       - name: Helm install
+        shell: bash
         run: |
+          set -o errexit
+          set -o pipefail
           helm install "$RELEASE_NAME" charts/dbp-moodle/ \
             --namespace "$NAMESPACE" \
             --values charts/dbp-moodle/values.yaml \
             --values tests/kind-values.yaml \
             --timeout 12m \
-            --wait
+            --wait || {
+              echo "Helm install failed. Dumping diagnostics..."
+              echo "--- helm list ---"
+              helm list -n "$NAMESPACE" || true
+              echo "--- kubectl get pods ---"
+              kubectl get pods -n "$NAMESPACE" -o wide || true
+              echo "--- kubectl get events ---"
+              kubectl get events -n "$NAMESPACE" --sort-by=.lastTimestamp || true
+              echo "--- helm status ---"
+              helm status "$RELEASE_NAME" -n "$NAMESPACE" || true
+              exit 1
+            }
 
       # ── 7. Kubernetes-Ressourcen prüfen ──────────────────────────────────────
       - name: Deployment existiert und ist verfügbar
         run: |
-          kubectl get deployment \
+          kubectl wait deployment \
             -n "$NAMESPACE" \
             -l app.kubernetes.io/name=moodle \
-            --field-selector=status.availableReplicas=1
+            --for=condition=Available \
+            --timeout=5m
 
       - name: Service existiert
         run: |
@@ -134,11 +155,21 @@ jobs:
           kubectl get role          -n "$NAMESPACE" moodle-cronjob
           kubectl get serviceaccount -n "$NAMESPACE" moodle-cronjob
           kubectl get rolebinding   -n "$NAMESPACE" moodle-cronjob
-          kubectl get role          -n "$NAMESPACE" moodle-restore-job
-          kubectl get serviceaccount -n "$NAMESPACE" moodle-restore-job
+
+          RESTORE_ENABLED=$(helm get values "$RELEASE_NAME" -n "$NAMESPACE" -o json | python3 -c 'import json,sys; data=json.load(sys.stdin) or {}; restore=data.get("dbpMoodle", {}).get("restore", {}); print("true" if str(restore.get("enabled", False)).lower() == "true" else "false")')
+
+          if [ "$RESTORE_ENABLED" = "true" ]; then
+            kubectl get role          -n "$NAMESPACE" moodle-restore-job
+            kubectl get rolebinding   -n "$NAMESPACE" moodle-restore-job
+            kubectl get serviceaccount -n "$NAMESPACE" moodle-restore-job
+          else
+            echo "Restore-RBAC ist deaktiviert für dieses Release; überspringe Restore-Job-Prüfungen."
+          fi
 
       - name: Moodle-Config-Secret (config.php) existiert
-        run: kubectl get secret -n "$NAMESPACE" moodle-config-secret
+        run: |
+          SECRET_NAME=$(helm get values "$RELEASE_NAME" -n "$NAMESPACE" -o json | python3 -c 'import json,sys; data=json.load(sys.stdin) or {}; php=data.get("dbpMoodle", {}).get("phpConfig", {}); existing=str(php.get("existingConfig", "")).strip(); print("moodle-php-config" if not existing else existing)')
+          kubectl get secret -n "$NAMESPACE" "$SECRET_NAME"
 
       - name: Alle Pods laufen ohne Crash-Loop
         run: |
@@ -161,8 +192,8 @@ jobs:
         run: |
           helm test "$RELEASE_NAME" \
             --namespace "$NAMESPACE" \
-            --timeout 5m \
-            --logs
+            --logs \
+            --timeout 5m
 
       # ── 9. Logs und Events bei Fehler ────────────────────────────────────────
       - name: Logs und Events bei Fehler sammeln

@@ -10,10 +10,10 @@
 #   KSV016 — Memory requests erford.    → SYS.1.6.A11
 #   KSV018 — Memory limits erforderlich → SYS.1.6.A11
 #
-# BEKANNTE LÜCKE:
-#   Der `moodle-cronjob` hat `resources: {}` (leer) als Standard-Wert.
-#   KSV011 und KSV018 werden für diesen Container von Trivy gemeldet.
-#   Empfehlung: In values.yaml unter `moodlecronjob.resources` CPU/Memory-Limits setzen.
+# STATUS:
+#   Alle Container haben inzwischen CPU-/Memory-Requests und -Limits in values.yaml:
+#   moodle, moodlecronjob, backup-cronjob, etherpadlite, clamav, postgresql,
+#   redis.master, sql-exporter, restore-job und update-preparation-job.
 
 suite: "BSI SYS.1.6.A11 – Ressourcenlimitierung"
 
@@ -53,22 +53,15 @@ tests:
       - isNotNull:
           path: spec.template.spec.containers[0].resources.requests.memory
 
-  # ── Backup-Cronjob (backup-cronjob via cronjob-subchart) ─────────────────────
-  # Die backup-cronjob-Instanz hat Ressourcen gesetzt (values.yaml backup-cronjob.resources).
-  # Für den moodle-cronjob: resources: {} → KEIN Limit gesetzt → Trivy KSV011/KSV018-Befund.
+  # ── Cronjobs (moodlecronjob / backup-cronjob via cronjob-subchart) ──────────
+  # Beide Instanzen haben Ressourcen in values.yaml gesetzt
+  # (moodlecronjob.resources, backup-cronjob.resources).
   #
-  # TODO: Ressourcen für moodlecronjob in values.yaml setzen, dann diesen Test aktivieren:
+  # TODO: Assertions für Subchart-Templates ergänzen. Der Template-Pfad für
+  # aliasierte Subcharts muss vorab mit `helm unittest` verifiziert werden:
   #
-  # - it: "moodle-cronjob: CPU-Limit ist gesetzt (SYS.1.6.A11) [LÜCKE: resources: {} ist Standard]"
+  # - it: "moodle-cronjob: CPU-Limit ist gesetzt (SYS.1.6.A11)"
   #   template: charts/cronjob/templates/cronjob.yml
-  #   set:
-  #     moodlecronjob.resources:
-  #       limits:
-  #         cpu: "500m"
-  #         memory: "256Mi"
-  #       requests:
-  #         cpu: "50m"
-  #         memory: "128Mi"
   #   asserts:
   #     - isNotNull:
   #         path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.cpu

@@ -94,6 +94,10 @@ global:
       enabled: false
     mod_videotime:
       enabled: false
+    tool_mediatime:
+      enabled: false
+    eledia_oidc:
+      enabled: false
 
 dbpMoodle:
   name: infra
@@ -101,6 +105,17 @@ dbpMoodle:
 
   # -- disallows all egress from release namespace for the moodle deployment
   allowInternalNetworkingOnly: false
+
+  # -- Ingress-NetworkPolicies for backing services (PostgreSQL, Redis, ClamAV, Etherpad, sql-exporter).
+  # -- Restricts east-west traffic to pods of the release namespace (BSI SYS.1.6). Requires a CNI with NetworkPolicy support.
+  networkPolicies:
+    enabled: false
+    # -- Namespace labels of the monitoring stack (e.g. {kubernetes.io/metadata.name: monitoring}).
+    # -- Required for cross-namespace scraping of metrics endpoints when enabled, otherwise scraping is blocked.
+    monitoringNamespaceLabels: {}
+    # -- Namespace labels of the ingress controller (e.g. {kubernetes.io/metadata.name: ingress-nginx}).
+    # -- Required for the etherpad ingress to keep working when enabled.
+    ingressNamespaceLabels: {}
 
   # -- use a configmap to determine which system plugins should be uninstalled --
   uninstallSystemPlugins: false
@@ -126,7 +141,7 @@ dbpMoodle:
     additionalPhpIni: |
       memory_limit = 513M
       upload_max_filesize = 201M
-      post_max_size = 150M
+      post_max_size = 201M
 
   # -- Configurations for the optional redis
   redis:
@@ -163,11 +178,30 @@ dbpMoodle:
     enabled: false
     affinity: {}
     tolerations: []
-    resources: {}
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    podSecurityContext:
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      capabilities:
+        drop:
+          - ALL
     # -- Which kubectl image to use
     repository: "ghcr.io/dbildungsplattform"
     image: "moodle-tools"
-    tag: "1.1.14"
+    tag: "1.1.15"
 
   moodleUpdatePreparationHook:
     rules:
@@ -181,6 +215,8 @@ dbpMoodle:
   # -- Backup configuration. Set enabled=true to enable the backup-cronjob. Also set s3 location credentials
   backup:
     enabled: false
+    dump_kind: "full" # Possible values: full, custom
+    run_pre_upgrade: true
     # -- Defines the maximum age of a backup before it is deleted
     retention_time: "6M"
     # -- Defines the maximum age of a full backup before a new full backup is created. The backups in between are incremental
@@ -221,9 +257,12 @@ dbpMoodle:
   restore:
     enabled: false
     restoreDate: ""
+    # replace_db_user_during_restore is only added for the migration from local to managed postgres as the restore script needs to be adjusted dynamically
+    replace_db_user_during_restore: false
+    dump_kind: "full" # Possible values: full, custom
     repository: "ghcr.io/dbildungsplattform"
     image: "moodle-tools"
-    tag: "1.1.14"
+    tag: "1.1.15"
     resources:
       limits:
         cpu: 2000m
@@ -233,10 +272,14 @@ dbpMoodle:
         memory: 2Gi
     podSecurityContext:
       fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
     securityContext:
       privileged: false
       allowPrivilegeEscalation: false
+      runAsUser: 1001
       runAsGroup: 1001
+      runAsNonRoot: true
       capabilities:
         drop:
           - ALL
@@ -279,6 +322,45 @@ dbpMoodle:
     # -- How many seconds to wait between upscaling adjustments
     scaleup_cooldown: 15
 
+  goemaxima:
+    enabled: false
+    image:
+      repository: ghcr.io/dbildungsplattform/goemaxima
+      tag: "latest"
+      pullPolicy: IfNotPresent
+      # digest: "sha256:897..."
+
+
+    replicaCount: 1
+
+    service:
+      type: ClusterIP
+      port: 8080
+      targetPort: 8080
+      annotations: {}
+      labels: {}
+
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "1"
+        memory: "512Mi"
+
+    env:
+      MAXIMA_TIMEOUT: "30"
+
+    podSecurityContext: {}
+      # fsGroup: 1000
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      seccompProfile:
+        type: RuntimeDefault
+
 moodle:
   redis:
     enabled: '{{- include "moodle.redis.enabled" . -}}'
@@ -288,12 +370,11 @@ moodle:
     registry: "ghcr.io"
     repository: "dbildungsplattform/moodle"
     # -- The dbp-moodle image which is build for this helm chart
-    tag: "4.5.10-fpm-bookworm-8.2.30-dbp1"
+    tag: "4.5.12-fpm-trixie-8.3.32-dbp1"
     pullPolicy: Always
     # -- Debug mode for more detailed moodle installation and log output
     debug: false
   moodleSkipInstall: false
-  usePasswordFiles: false
   moodleSiteName: "Moodle"
   moodleLang: "de"
   moodleUsername: admin
@@ -361,16 +442,9 @@ moodle:
       cert-manager.io/cluster-issuer: sc-cert-manager-clusterissuer-letsencrypt
       nginx.ingress.kubernetes.io/proxy-connect-timeout: "30s"
       nginx.ingress.kubernetes.io/proxy-read-timeout: "20s"
-      nginx.ingress.kubernetes.io/proxy-body-size: "200M"
+      nginx.ingress.kubernetes.io/proxy-body-size: "201M"
       nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
       nginx.ingress.kubernetes.io/whitelist-source-range: "0.0.0.0/0"
-  # Switch to bitnamilegacy, see https://github.com/bitnami/charts/issues/35164
-  certificates:
-    image:
-      repository: bitnamilegacy/os-shell
-  volumePermissions:
-    image:
-      repository: bitnamilegacy/os-shell
   metrics:
     enabled: true
     image:
@@ -425,14 +499,16 @@ moodle:
     https: 8443
   networkPolicy:
     enabled: false
+  startupProbe:
+    enabled: true
+    failureThreshold: 120
 
 postgresql:
   enabled: true
-  # usePasswordFiles: false required if we increase the helm chart version
   # Switch to bitnamilegacy, see https://github.com/bitnami/charts/issues/35164
   image:
     repository: bitnamilegacy/postgresql
-    tag: "14.18.0-debian-12-r0"
+    tag: "16.6.0-debian-12-r2"
   volumePermissions:
     image:
       repository: bitnamilegacy/os-shell
@@ -453,8 +529,21 @@ postgresql:
   primary:
     extendedConfiguration: |
       max_connections = 800
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
     containerSecurityContext:
+      enabled: true
       privileged: false
+      allowPrivilegeEscalation: false
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      capabilities:
+        drop:
+          - ALL
     affinity: {}
     tolerations: []
     resources:
@@ -495,13 +584,39 @@ redis:
   master:
     affinity: {}
     tolerations: []
-    resources: {}
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
 
 etherpadlite:
   enabled: false
   image:
     repository: "ghcr.io/dbildungsplattform/etherpad"
     tag: "2.6.1.0"
+  # Currently this data is doubled with the env vars because we need the fields for backup and retore jobs
+  externalDatabase:
+    # -- Type of DB to provision, possible values are "postgres"
+    type: "postgres"
+    # -- Host of the existing database
+    host: "moodle-etherpad-postgresql"
+    # -- Port of the existing database
+    port: 5432
+    # -- Existing username in the external db
+    user: "etherpad"
+    # -- Password for the above username
+    password: ""
+    # -- Name of the existing database
+    database: "etherpad"
+    # -- Name of an existing secret resource containing the DB password
+    existingSecret: "moodle"
+    # -- Name of the key holding the DB password in the existing Secret
+    existingSecretKey: "etherpad-postgresql-password"
+    # -- -- Use ssl to communicate with the database
+    ssl: false
   env:
     - name: DB_TYPE
       value: "postgres"
@@ -527,10 +642,16 @@ etherpadlite:
         items:
           - key: "etherpad-api-key"
             path: "APIKEY.txt"
+    - name: "etherpad-settings"
+      configMap:
+        name: "etherpad-settings"
   volumeMounts:
     - name: "api-key"
       mountPath: "/opt/etherpad-lite/APIKEY.txt"
       subPath: "APIKEY.txt"
+    - name: "etherpad-settings"
+      mountPath: "/opt/etherpad-lite/settings.json"
+      subPath: settings
   ingress:
     enabled: true
     annotations:
@@ -544,8 +665,19 @@ etherpadlite:
       - secretName: "etherpad.example.de-tls"
         hosts:
           - "etherpad.example.de"
+  podSecurityContext:
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
+    allowPrivilegeEscalation: false
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
   affinity: {}
   tolerations: []
   resources:
@@ -558,11 +690,10 @@ etherpadlite:
 
 etherpad-postgresql:
   enabled: false
-  # usePasswordFiles: false
   # Switch to bitnamilegacy, see https://github.com/bitnami/charts/issues/35164
   image:
     repository: bitnamilegacy/postgresql
-    tag: "14.18.0-debian-12-r0"
+    tag: "16.6.0-debian-12-r2"
   volumePermissions:
     image:
       repository: bitnamilegacy/os-shell
@@ -579,8 +710,21 @@ etherpad-postgresql:
   persistence:
     existingClaim: "moodle-etherpad-postgresql"
   primary:
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
     containerSecurityContext:
+      enabled: true
       privileged: false
+      allowPrivilegeEscalation: false
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+      capabilities:
+        drop:
+          - ALL
     affinity: {}
     tolerations: []
     resources:
@@ -594,7 +738,7 @@ etherpad-postgresql:
 moodlecronjob:
   image:
     repository: "ghcr.io/dbildungsplattform/moodle-tools"
-    tag: "1.1.14"
+    tag: "1.1.15"
   clusterRole:
     create: false
   serviceAccount:
@@ -602,6 +746,8 @@ moodlecronjob:
     create: false
   podSecurityContext:
     fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
     allowPrivilegeEscalation: false
@@ -613,7 +759,13 @@ moodlecronjob:
         - ALL
   affinity: {}
   tolerations: []
-  resources: {}
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
   jobs:
     - name: php-script
       schedule: "* * * * *"
@@ -646,7 +798,7 @@ moodlecronjob:
 backup-cronjob:
   image:
     repository: "ghcr.io/dbildungsplattform/moodle-tools"
-    tag: "1.1.14"
+    tag: "1.1.15"
   clusterRole:
     create: false
   serviceAccount:
@@ -678,6 +830,31 @@ backup-cronjob:
         secretKeyRef:
           name: moodle
           key: mariadb-password
+    - name: DATABASE_HOST_ETHERPAD
+      valueFrom: 
+        secretKeyRef:
+          name: etherpad-database
+          key: host
+    - name: DATABASE_PORT_ETHERPAD
+      valueFrom: 
+        secretKeyRef:
+          name: etherpad-database
+          key: port
+    - name: DATABASE_NAME_ETHERPAD
+      valueFrom:
+        secretKeyRef:
+          name: etherpad-database
+          key: name
+    - name: DATABASE_USER_ETHERPAD
+      valueFrom:
+        secretKeyRef:
+          name: etherpad-database
+          key: user
+    - name: DATABASE_PASSWORD_ETHERPAD
+      valueFrom:
+        secretKeyRef:
+          name: moodle
+          key: etherpad-postgresql-password
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
@@ -723,10 +900,14 @@ backup-cronjob:
         defaultMode: 0644
   podSecurityContext:
     fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
     allowPrivilegeEscalation: false
+    runAsUser: 1001
     runAsGroup: 1001
+    runAsNonRoot: true
     capabilities:
       drop:
         - ALL
@@ -758,7 +939,7 @@ backup-cronjob:
         periodSeconds: 10
 
 clamav:
-  enabled: true
+  enabled: false
   image:
     tag: "1.5.1"
     pullPolicy: "IfNotPresent"
@@ -780,6 +961,8 @@ clamav:
     runAsUser: 1001
     runAsGroup: 1001
     fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     allowPrivilegeEscalation: false
     runAsNonRoot: true
@@ -803,12 +986,28 @@ sql-exporter:
   enabled: false
   image:
     pullPolicy: "IfNotPresent"
+  podSecurityContext:
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
   securityContext:
     privileged: false
     allowPrivilegeEscalation: false
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    capabilities:
+      drop:
+        - ALL
   affinity: {}
   tolerations: []
-  resources: {}
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
   extraVolumes:
     - name: moodle-collector-config
       volume:

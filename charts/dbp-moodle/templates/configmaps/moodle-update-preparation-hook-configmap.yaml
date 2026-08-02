@@ -1,4 +1,4 @@
-{{ if not .Values.dbpMoodle.restore.enabled }}
+{{ if and .Values.dbpMoodle.moodleUpdatePreparationJob.enabled (not .Values.dbpMoodle.restore.enabled) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

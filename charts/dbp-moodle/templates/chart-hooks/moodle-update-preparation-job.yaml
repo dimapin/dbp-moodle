@@ -11,11 +11,13 @@ metadata:
 spec:
   template:
     spec:
+      securityContext:
+        {{- toYaml .Values.dbpMoodle.moodleUpdatePreparationJob.podSecurityContext | nindent 8 }}
       containers:
         - name: moodle-update-preparation
           image: "{{ .Values.dbpMoodle.moodleUpdatePreparationJob.repository }}/{{ .Values.dbpMoodle.moodleUpdatePreparationJob.image }}:{{ .Values.dbpMoodle.moodleUpdatePreparationJob.tag }}"
           securityContext:
-            privileged: false
+            {{- toYaml .Values.dbpMoodle.moodleUpdatePreparationJob.securityContext | nindent 12 }}
           command: ["/bin/bash", "/update-preparation.sh"]
           {{- with .Values.dbpMoodle.moodleUpdatePreparationJob.resources }}
           resources:

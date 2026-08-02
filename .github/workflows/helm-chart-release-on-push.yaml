@@ -11,7 +11,7 @@ concurrency:
 jobs:
   build_image_on_push:
     name: "Publish image and scan with trivy"
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
     permissions:
       packages: write
       security-events: write
@@ -20,17 +20,21 @@ jobs:
     with:
       image_name: "moodle"
       run_trivy_scan: false
-      image_tag_generation: ticket_from_branch
+      image_tag_generation: commit_hash
       add_latest_tag: false
       container_registry: "ghcr.io"
       fail_on_vulnerabilites: false
       context: "./moodle/"
 
   release_helm:
+    needs: build_image_on_push
+    if: ${{ github.repository_owner == 'dBildungsplattform' }}
+    permissions:
+      contents: read
     uses: dBildungsplattform/dbp-github-workflows/.github/workflows/chart-release.yaml@7
     secrets: inherit
     with:
       chart_name: dbp-moodle
       helm_repo_list: bitnami,https://charts.bitnami.com/bitnami,sql_exporter,https://burningalchemist.github.io/sql_exporter/
-      helm_chart_version_generation: ticket_from_branch_timestamp
-      image_tag_generation: ticket_from_branch
+      helm_chart_version_generation: timestamp
+      image_tag_generation: commit_hash

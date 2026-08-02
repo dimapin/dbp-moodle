@@ -1,0 +1,31 @@
+{{- if and .Values.dbpMoodle.networkPolicies.enabled (or .Values.postgresql.enabled (index .Values "etherpad-postgresql").enabled) }}
+# Covers both postgresql instances (primary and etherpad) since bitnami charts
+# label pods with the chart name regardless of the dependency alias
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgresql-allow-internal-ingress
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/instance: "{{ .Release.Name }}"
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- with .Values.dbpMoodle.networkPolicies.monitoringNamespaceLabels }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 9187
+    {{- end }}
+{{- end }}
