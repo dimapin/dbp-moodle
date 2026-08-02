@@ -55,7 +55,14 @@ cd /plugins || exit 1
 # GitHub fallback map: plugin_name -> "github_user/github_repo"
 # Used when the moodle.org download URL returns an empty file (e.g. broken/404 upstream).
 declare -A plugin_github_repos=(
+    ["local_wunderbyte_table"]="Wunderbyte-GmbH/moodle-local_wunderbyte_table"
     ["filter_filtercodes"]="michael-milette/moodle-filter_filtercodes"
+)
+
+plugin_github_branch_fallbacks=(
+    MOODLE_405_STABLE
+    main
+    master
 )
 
 download_plugin_github() {
@@ -68,21 +75,36 @@ download_plugin_github() {
 
     echo "Attempting GitHub fallback for '$plugin_name' from ${github_repo}..."
 
-    local tag
-    tag=$(curl -sf "https://api.github.com/repos/${github_repo}/releases/latest" | jq -r '.tag_name')
-
-    if [ -z "$tag" ] || [ "$tag" = "null" ]; then
-        echo "WARNING: Could not determine latest release tag for ${github_repo}." >&2
-        return 1
-    fi
-
-    echo "Downloading '$plugin_name' from GitHub at tag ${tag}..."
-
     local tmp_dir
     tmp_dir=$(mktemp -d)
-    local archive_url="https://github.com/${github_repo}/archive/refs/tags/${tag}.zip"
+    local archive_url=""
+    local tag
+    tag=$(curl -sf "https://api.github.com/repos/${github_repo}/releases/latest" | jq -r '.tag_name // empty') || true
 
-    if ! curl -Lsf "$archive_url" -o "${tmp_dir}/archive.zip"; then
+    if [ -n "$tag" ] && [ "$tag" != "null" ]; then
+        archive_url="https://github.com/${github_repo}/archive/refs/tags/${tag}.zip"
+        echo "Downloading '$plugin_name' from GitHub at tag ${tag}..."
+        if ! curl -Lsf "$archive_url" -o "${tmp_dir}/archive.zip"; then
+            echo "WARNING: GitHub tag archive download failed for '$plugin_name' (${tag}). Trying branch fallback..." >&2
+            rm -f "${tmp_dir}/archive.zip"
+        fi
+    else
+        echo "WARNING: Could not determine latest release tag for ${github_repo}. Trying branch fallback..." >&2
+    fi
+
+    if [ ! -s "${tmp_dir}/archive.zip" ]; then
+        local branch
+        for branch in "${plugin_github_branch_fallbacks[@]}"; do
+            archive_url="https://github.com/${github_repo}/archive/refs/heads/${branch}.zip"
+            echo "Trying GitHub branch fallback for '$plugin_name' on ${branch}..."
+            if curl -Lsf "$archive_url" -o "${tmp_dir}/archive.zip"; then
+                break
+            fi
+            rm -f "${tmp_dir}/archive.zip"
+        done
+    fi
+
+    if [ ! -s "${tmp_dir}/archive.zip" ]; then
         echo "WARNING: GitHub archive download failed for '$plugin_name'." >&2
         rm -rf "${tmp_dir}"
         return 1
