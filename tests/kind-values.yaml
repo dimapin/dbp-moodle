@@ -55,6 +55,13 @@ moodle:
   service:
     type: ClusterIP
 
+  # Das im CI gebaute moodle:test Image startet PHP-FPM (Port 9000),
+  # aber keinen Apache-Listener auf 8080. Für den TCP-Smoke-Test muss
+  # der Service daher auf den tatsächlichen Container-Port zeigen.
+  containerPorts:
+    http: 9000
+    https: 8443
+
   persistence:
     enabled: false
     existingClaim: ""
