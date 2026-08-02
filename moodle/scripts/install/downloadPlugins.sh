@@ -59,6 +59,12 @@ declare -A plugin_github_repos=(
     ["filter_filtercodes"]="michael-milette/moodle-filter_filtercodes"
 )
 
+# Plugins listed here are optional at image build time. If download and fallback
+# fail, the build continues and plugin activation can still be controlled at runtime.
+declare -A plugin_allow_missing=(
+    ["tool_certificate"]=1
+)
+
 plugin_github_branch_fallbacks=(
     MOODLE_405_STABLE
     main
@@ -144,12 +150,21 @@ check_plugin_size() {
         echo "WARNING: Moodle Plugin '$plugin_name' is empty (size 0 bytes). Trying GitHub fallback..." >&2
         rm -f "/plugins/${plugin_name}.zip"
         if ! download_plugin_github "$plugin_name"; then
+            if [ -n "${plugin_allow_missing[$plugin_name]}" ]; then
+                echo "WARNING: Moodle Plugin '$plugin_name' is unavailable and marked optional for image build. Continuing..." >&2
+                return 0
+            fi
             echo "ERROR: Moodle Plugin '$plugin_name' could not be downloaded from any source." >&2
             exit 1
         fi
         local fallback_size
         fallback_size=$(stat -c%s "/plugins/${plugin_name}.zip" 2>/dev/null || echo 0)
         if [ "$fallback_size" -eq 0 ]; then
+            if [ -n "${plugin_allow_missing[$plugin_name]}" ]; then
+                echo "WARNING: Moodle Plugin '$plugin_name' is still empty after fallback but marked optional for image build. Continuing..." >&2
+                rm -f "/plugins/${plugin_name}.zip"
+                return 0
+            fi
             echo "ERROR: Moodle Plugin '$plugin_name' is still empty after GitHub fallback." >&2
             exit 1
         fi
